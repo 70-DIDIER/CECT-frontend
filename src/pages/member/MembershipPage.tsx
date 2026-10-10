@@ -65,6 +65,29 @@ export default function MembershipPage() {
 
   const mobileMoney = method === 'TMONEY' || method === 'FLOOZ'
 
+  useEffect(() => {
+    if (!attempt || attempt.mode !== 'psp' || !isInFlight(attempt.status)) return
+
+    let cancelled = false
+
+    const reconcile = async () => {
+      try {
+        await post(`/me/membership/payments/${attempt.id}/refresh`)
+        if (!cancelled) await query.refetch()
+      } catch {
+        // Webhook processing remains the primary path; polling is only a fallback.
+      }
+    }
+
+    void reconcile()
+    const timer = window.setInterval(() => void reconcile(), 7000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [attempt?.id, attempt?.mode, attempt?.status])
+
   const startPayment = useMutation({
     mutationFn: () =>
       post<PaymentAttempt>(
@@ -132,7 +155,14 @@ export default function MembershipPage() {
                 }}
                 className="space-y-4"
               >
-                {state.payment_quote && <AmountBreakdown net={state.payment_quote.net_amount} fee={state.payment_quote.fee_amount} total={state.payment_quote.total_amount} />}
+                {state.payment_quote && (
+                  <AmountBreakdown
+                    net={state.payment_quote.net_amount}
+                    fee={state.payment_quote.fee_amount}
+                    total={state.payment_quote.total_amount}
+                    externalFees={mobileMoney}
+                  />
+                )}
                 <MethodPicker value={method} onChange={setMethod} />
                 {mobileMoney && (
                   <div className="space-y-1.5">
