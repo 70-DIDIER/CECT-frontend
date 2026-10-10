@@ -37,9 +37,10 @@ interface AmountBreakdownProps {
   net: number
   fee: number
   total: number
+  externalFees?: boolean
 }
 
-export function AmountBreakdown({ net, fee, total }: AmountBreakdownProps) {
+export function AmountBreakdown({ net, fee, total, externalFees = false }: AmountBreakdownProps) {
   return (
     <dl className="space-y-1.5 rounded-xl bg-[var(--dash-bg)] p-4 text-sm">
       <div className="flex justify-between gap-4">
@@ -48,12 +49,19 @@ export function AmountBreakdown({ net, fee, total }: AmountBreakdownProps) {
       </div>
       <div className="flex justify-between gap-4">
         <dt className="text-[var(--color-text-muted)]">Frais de transaction</dt>
-        <dd className="font-semibold text-[var(--color-text)]">{formatXof(fee)}</dd>
+        <dd className="text-right font-semibold text-[var(--color-text)]">
+          {externalFees ? 'Ajoutés par FedaPay au checkout' : formatXof(fee)}
+        </dd>
       </div>
       <div className="flex justify-between gap-4 border-t border-[var(--color-border)] pt-2">
-        <dt className="font-bold text-[var(--color-text)]">Total à payer</dt>
+        <dt className="font-bold text-[var(--color-text)]">{externalFees ? 'Montant CECT' : 'Total à payer'}</dt>
         <dd className="text-base font-extrabold text-[var(--color-primary)]">{formatXof(total)}</dd>
       </div>
+      {externalFees && (
+        <p className="pt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
+          Le total final correspond au montant CECT ci-dessus + les frais FedaPay affichés sur la page sécurisée de paiement.
+        </p>
+      )}
     </dl>
   )
 }
@@ -87,7 +95,7 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onChangeMethod 
 
   return (
     <div className="space-y-4">
-      <AmountBreakdown net={payment.net_amount} fee={payment.fee_amount} total={payment.amount} />
+      <AmountBreakdown net={payment.net_amount} fee={payment.fee_amount} total={payment.amount} externalFees={payment.mode === 'psp'} />
 
       {failure && (
         <p role="alert" className="rounded-xl border border-[var(--color-danger)]/20 bg-[var(--color-danger)]/5 px-4 py-3 text-sm text-[var(--color-danger)]">
@@ -107,7 +115,7 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onChangeMethod 
               className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
             >
               <ExternalLink size={16} aria-hidden />
-              Payer {formatXof(payment.amount)}
+              Continuer vers FedaPay
             </a>
           )}
           <button
