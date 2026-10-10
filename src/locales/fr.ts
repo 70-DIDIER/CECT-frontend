@@ -243,7 +243,7 @@ const fr = {
   auth: {
     login: {
       title: 'Connexion',
-      pernum: 'Pernum (identifiant membre)',
+      pernum: 'Adresse e-mail ou Pernum',
       password: 'Mot de passe',
       forgot: 'Mot de passe oublié ?',
       submit: 'Se connecter',
@@ -263,11 +263,11 @@ const fr = {
       legalStatus: 'Statut juridique',
       firstName: 'Prénom',
       lastName: 'Nom',
-      pernum: 'Pernum (identifiant choisi)',
+      pernum: 'Pernum',
       pernumHint: 'Cet identifiant sera votre identifiant de connexion.',
       pernumInvalid: 'Le Pernum doit contenir exactement 10 chiffres.',
       phone: 'Numéro de téléphone',
-      email: 'Adresse e-mail (facultatif)',
+      email: 'Adresse e-mail',
       emailHint: 'Nécessaire pour récupérer votre mot de passe.',
       password: 'Mot de passe (8 caractères min.)',
       confirmPassword: 'Confirmer le mot de passe',
