@@ -18,6 +18,12 @@ export function authErrorMessage(error: unknown): string {
       return 'Code invalide ou expiré.'
     case 'OTP_LOCKED':
       return 'Trop d’essais sur ce code. Demandez-en un nouveau.'
+    case 'PAYMENT_PROVIDER_UNAVAILABLE':
+      return 'Le service de paiement est momentanément indisponible. Réessayez plus tard.'
+    case 'PAYMENT_FEES_NOT_CONFIGURED':
+      return 'Le paiement est temporairement indisponible. La configuration du prestataire doit être finalisée.'
+    case 'PAYMENT_METHOD_NOT_AVAILABLE':
+      return 'Ce moyen de paiement n’est pas disponible actuellement.'
     case 'NETWORK_ERROR':
       return error.message
     default:
@@ -29,3 +35,5 @@ export function fieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError)) return {}
   return Object.fromEntries(Object.entries(error.fieldErrors).map(([field, messages]) => [field, messages[0] ?? '']))
 }
+
+[executed on device: ip-172-31-20-3 (266007aa-ed81-449a-969b-4ac5ea49fe76)]
