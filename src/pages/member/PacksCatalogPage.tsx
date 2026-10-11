@@ -286,7 +286,10 @@ function PlanCard({ plan, owned, onSelect, onTopup }: { plan: PackPlan; owned: U
   return (
     <article className="flex flex-col rounded-[18px] border border-[var(--color-border)] bg-[var(--dash-card)] p-6">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-base font-bold text-[var(--color-text)]">{plan.name}</h3>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-primary)]">{FAMILIES.find((family) => family.family === plan.family)?.title}</p>
+          <h3 className="text-base font-bold text-[var(--color-text)]">{plan.name}</h3>
+        </div>
         {hasActive && <StatusBadge label="Souscrit" tone="success" icon={BadgeCheck} />}
         {pending && <StatusBadge label="Paiement en attente" tone="warning" icon={Clock3} />}
       </div>
@@ -440,7 +443,7 @@ export default function PacksCatalogPage() {
               />
             </div>
           )}
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {myPacks.map((pack) => (
               <MyPackCard key={pack.id} pack={pack} detail={dashboard.data?.packs.find((item) => item.id === pack.id)} plan={planById.get(pack.plan.id)} onResume={() => setSelected(planById.get(pack.plan.id) ?? null)} onTopup={() => topup(pack)} />
             ))}
@@ -459,23 +462,11 @@ export default function PacksCatalogPage() {
               </button>
             </p>
           )}
-          {FAMILIES.map(({ family, title, summary }) => {
-            const plans = (catalog.data ?? []).filter((plan) => plan.family === family)
-            if (plans.length === 0) return null
-            return (
-              <section key={family} aria-labelledby={`family-${family}`}>
-                <h2 id={`family-${family}`} className="text-lg font-bold text-[var(--color-text)]">
-                  Packs {title}
-                </h2>
-                <p className="mb-5 mt-1 text-sm text-[var(--color-text-muted)]">{summary}</p>
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                  {plans.map((plan) => (
-                    <PlanCard key={plan.id} plan={plan} owned={ownedByPlan.get(plan.id)} onSelect={() => setSelected(plan)} onTopup={() => { const pack = ownedByPlan.get(plan.id); if (pack) topup(pack) }} />
-                  ))}
-                </div>
-              </section>
-            )
-          })}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {FAMILIES.flatMap(({ family }) => (catalog.data ?? []).filter((plan) => plan.family === family)).map((plan) => (
+              <PlanCard key={plan.id} plan={plan} owned={ownedByPlan.get(plan.id)} onSelect={() => setSelected(plan)} onTopup={() => { const pack = ownedByPlan.get(plan.id); if (pack) topup(pack) }} />
+            ))}
+          </div>
         </div>
       )}
 

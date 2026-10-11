@@ -258,14 +258,14 @@ export default function RegisterPage() {
 
                   {/* First name */}
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t('auth.register.firstName')}</label>
+                    <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t(personType === 'legal' ? 'auth.register.managerFirstName' : 'auth.register.firstName')}</label>
                     <input {...register('firstName')} className={inputClass} placeholder="Jean" />
                     {errors.firstName && <p className="mt-1 text-xs text-[var(--color-danger)]">{t('common.required')}</p>}
                   </div>
 
                   {/* Last name */}
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t('auth.register.lastName')}</label>
+                    <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t(personType === 'legal' ? 'auth.register.managerLastName' : 'auth.register.lastName')}</label>
                     <input {...register('lastName')} className={inputClass} placeholder="Dupont" />
                     {errors.lastName && <p className="mt-1 text-xs text-[var(--color-danger)]">{t('common.required')}</p>}
                   </div>

@@ -24,7 +24,7 @@ export function PacksPreview() {
         <span>{t('packs.provisionalNote', 'Les formules et tarifs seront confirmés par le Conseil d\'administration.')}</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 mb-8">
         {PACK_FAMILIES.map((family, i) => {
           const Icon = family.icon
           return (
