@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { BadgeCheck, Boxes, Coins, LayoutDashboard, LineChart, ScanLine, Store, UserRound } from 'lucide-react'
+import { BadgeCheck, Bell, Boxes, Coins, LayoutDashboard, LineChart, ScanLine, Store, UserRound } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { usePublicConfig } from '@/features/config/usePublicConfig'
 import { isAdminRole } from '@/lib/roles'
@@ -14,6 +14,7 @@ const SECTIONS: NavSection[] = [
       { label: 'Accueil', icon: LayoutDashboard, to: '/espace', end: true, tab: true },
       { label: 'Mes packs', icon: Boxes, to: '/espace/packs', tab: true },
       { label: 'Activité', icon: LineChart, to: '/espace/activite', tab: true },
+      { label: 'Notifications', icon: Bell, to: '/espace/notifications' },
     ],
   },
   {
@@ -36,6 +37,7 @@ const TITLES: Record<string, string> = {
   '/espace': 'Accueil',
   '/espace/packs': 'Mes packs',
   '/espace/activite': 'Activité',
+  '/espace/notifications': 'Notifications',
   '/espace/payer': 'Payer un marchand',
   '/espace/vendre': 'Vendre mes YEM',
   '/espace/marchand': 'Espace marchand',
