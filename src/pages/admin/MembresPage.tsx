@@ -111,13 +111,13 @@ function MemberDialog({ memberId, onClose }: { memberId: string; onClose: () => 
       <FormDialog
         title={suspend ? 'Suspendre le compte' : 'Réactiver le compte'}
         subtitle={displayName(member)}
-        fields={[]}
+        fields={[{ name: 'reason', label: 'Motif', type: 'textarea', required: true }]}
         submitLabel={suspend ? 'Suspendre' : 'Réactiver'}
         danger={suspend}
         confirmText={suspend ? 'Le membre ne pourra plus se connecter ni effectuer d’opération.' : 'Le membre retrouvera l’accès à son espace.'}
         onClose={() => setConfirming(null)}
-        onSubmit={async () => {
-          await post(`/admin/members/${member.id}/${confirming}`)
+        onSubmit={async (values) => {
+          await post(`/admin/members/${member.id}/${confirming}`, { reason: values.reason })
           await queryClient.invalidateQueries({ queryKey: ['member-overview', memberId] })
           await queryClient.invalidateQueries({ queryKey: ['members'] })
         }}

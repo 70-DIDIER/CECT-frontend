@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight } from 'lucide-react'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { ARTICLES } from '@/data/news'
+import { usePublicConfig } from '@/features/config/usePublicConfig'
 
 export default function NewsPage() {
   const { t, i18n } = useTranslation()
   const lang = i18n.language.startsWith('en') ? 'en' : 'fr'
+  const configured = usePublicConfig().data?.content.news ?? []
+  const articles = configured.length > 0 ? configured : ARTICLES
 
   const fmtDate = (d: string) =>
     new Date(d).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
@@ -23,7 +26,7 @@ export default function NewsPage() {
       <Section>
         <SectionHeader title={t('news.title')} subtitle={t('news.subtitle')} />
         <div className="max-w-3xl mx-auto space-y-6">
-          {ARTICLES.map((a) => (
+          {articles.map((a) => (
             <article
               key={a.id}
               className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 hover:shadow-md transition-shadow"
@@ -32,10 +35,10 @@ export default function NewsPage() {
                 {t('news.publishedOn')} {fmtDate(a.date)}
               </p>
               <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">
-                {lang === 'en' ? a.title_en : a.title_fr}
+                {lang === 'en' ? (a.title_en || a.title_fr) : a.title_fr}
               </h2>
               <p className="text-sm text-[var(--color-text-muted)] mb-4">
-                {lang === 'en' ? a.excerpt_en : a.excerpt_fr}
+                {lang === 'en' ? (a.excerpt_en || a.excerpt_fr) : a.excerpt_fr}
               </p>
               <button className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-primary)] hover:gap-2 transition-all">
                 {t('news.readMore')}

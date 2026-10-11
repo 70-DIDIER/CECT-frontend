@@ -95,7 +95,7 @@ export default function ActivityPage() {
     staleTime: 0,
   })
 
-  const packs = dashboard.data?.packs ?? []
+  const packs = useMemo(() => dashboard.data?.packs ?? [], [dashboard.data?.packs])
   const packNames = useMemo(() => new Map(packs.map((pack) => [pack.id, pack.name])), [packs])
   const rows = (ledger.data?.pages.flatMap((page) => page.data) ?? []).filter((row) => type === 'all' || row.type === type)
 

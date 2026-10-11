@@ -76,6 +76,7 @@ export function Footer() {
                 [t('nav.home'), '/'],
                 [t('nav.about'), '/a-propos'],
                 [t('nav.partners'), '/partenaires'],
+                [t('nav.merchants'), '/marchands'],
                 [t('nav.news'), '/actualites'],
                 ['Documents', '/documents'],
                 [t('nav.faq'), '/faq'],

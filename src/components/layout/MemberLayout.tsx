@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { BadgeCheck, Boxes, Coins, LayoutDashboard, LineChart, ScanLine, Store, UserRound } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
+import { usePublicConfig } from '@/features/config/usePublicConfig'
 import { isAdminRole } from '@/lib/roles'
 import { AppShell, type NavSection } from './AppShell'
 import { FullPageLoader } from './FullPageLoader'
@@ -46,6 +47,7 @@ export function MemberLayout() {
   const { user, loading, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const publicConfig = usePublicConfig()
   const isLegal = user?.personType === 'legal'
 
   const sections = useMemo(() => SECTIONS.map((section) => ({ ...section, items: section.items.filter((item) => item.to !== '/espace/marchand' || isLegal) })), [isLegal])
@@ -69,6 +71,11 @@ export function MemberLayout() {
       onLogout={() => void handleLogout()}
       pageTitle={TITLES[location.pathname] ?? 'Espace membre'}
     >
+      {publicConfig.data?.test_mode && (
+        <div role="status" className="mb-5 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <strong>Mode recette :</strong> les paiements et règlements utilisent uniquement des mécanismes de test/simulation. Aucun paiement réel ne doit être exécuté depuis cet environnement.
+        </div>
+      )}
       <Outlet />
     </AppShell>
   )

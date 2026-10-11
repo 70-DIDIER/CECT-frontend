@@ -10,12 +10,14 @@ const YemPage          = lazy(() => import('@/pages/YemPage'))
 const PacksPage        = lazy(() => import('@/pages/PacksPage'))
 const AboutPage        = lazy(() => import('@/pages/AboutPage'))
 const PartnersPage     = lazy(() => import('@/pages/PartnersPage'))
+const MerchantsPage    = lazy(() => import('@/pages/MerchantsPage'))
 const NewsPage         = lazy(() => import('@/pages/NewsPage'))
 const FaqPage          = lazy(() => import('@/pages/FaqPage'))
 const ContactPage      = lazy(() => import('@/pages/ContactPage'))
 const LoginPage        = lazy(() => import('@/pages/LoginPage'))
 const RegisterPage     = lazy(() => import('@/pages/RegisterPage'))
 const ForgotPasswordPage = lazy(() => import('@/pages/ForgotPasswordPage'))
+const StaffActivationPage = lazy(() => import('@/pages/StaffActivationPage'))
 const DocumentsPage    = lazy(() => import('@/pages/DocumentsPage'))
 const LegalPage        = lazy(() => import('@/pages/LegalPage'))
 const MemberHomePage   = lazy(() => import('@/pages/member/HomePage'))
@@ -35,6 +37,10 @@ const ValidationsPage    = lazy(() => import('@/pages/admin/ValidationsPage'))
 const FinancePage        = lazy(() => import('@/pages/admin/FinancePage'))
 const ConfigurationPage  = lazy(() => import('@/pages/admin/ConfigurationPage'))
 const PacksAdminPage     = lazy(() => import('@/pages/admin/PacksAdminPage'))
+const AccessPage         = lazy(() => import('@/pages/admin/AccessPage'))
+const AuditPage          = lazy(() => import('@/pages/admin/AuditPage'))
+const ContentPage        = lazy(() => import('@/pages/admin/ContentPage'))
+const MerchantDirectoryAdminPage = lazy(() => import('@/pages/admin/MerchantDirectoryAdminPage'))
 const ExportPage         = lazy(() => import('@/pages/admin/ExportPage'))
 
 function Loading() {
@@ -67,12 +73,14 @@ const router = createBrowserRouter([
       { path: 'packs',          element: <S><PacksPage /></S> },
       { path: 'a-propos',       element: <S><AboutPage /></S> },
       { path: 'partenaires',    element: <S><PartnersPage /></S> },
+      { path: 'marchands',      element: <S><MerchantsPage /></S> },
       { path: 'actualites',     element: <S><NewsPage /></S> },
       { path: 'faq',            element: <S><FaqPage /></S> },
       { path: 'contact',        element: <S><ContactPage /></S> },
       { path: 'connexion',      element: <S><LoginPage /></S> },
       { path: 'inscription',    element: <S><RegisterPage /></S> },
       { path: 'mot-de-passe-oublie', element: <S><ForgotPasswordPage /></S> },
+      { path: 'activation-compte-interne', element: <S><StaffActivationPage /></S> },
       { path: 'documents',      element: <S><DocumentsPage /></S> },
       { path: 'mentions-legales', element: <S><LegalPage /></S> },
       { path: 'confidentialite', element: <S><LegalPage /></S> },
@@ -110,6 +118,10 @@ const router = createBrowserRouter([
       { path: 'membres',          element: <S><MembresPage /></S> },
       { path: 'packs',            element: <S><PacksAdminPage /></S> },
       { path: 'finance',          element: <S><FinancePage /></S> },
+      { path: 'access',           element: <S><AccessPage /></S> },
+      { path: 'audit',            element: <S><AuditPage /></S> },
+      { path: 'contenus',         element: <S><ContentPage /></S> },
+      { path: 'marchands',        element: <S><MerchantDirectoryAdminPage /></S> },
       { path: 'configuration',    element: <S><ConfigurationPage /></S> },
       { path: 'export',           element: <S><ExportPage /></S> },
     ],

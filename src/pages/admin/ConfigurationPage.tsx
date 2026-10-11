@@ -29,6 +29,7 @@ const GROUP_LABELS: Record<string, string> = {
   ops: 'Exploitation',
   packs: 'Packs',
   notifications: 'Notifications',
+  content: 'Contenus publics',
 }
 
 function groupLabel(group: string): string {

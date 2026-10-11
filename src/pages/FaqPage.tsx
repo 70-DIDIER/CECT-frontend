@@ -3,10 +3,19 @@ import { useTranslation } from 'react-i18next'
 import * as Accordion from '@radix-ui/react-accordion'
 import { ChevronDown } from 'lucide-react'
 import { Section, SectionHeader } from '@/components/ui/Section'
+import { usePublicConfig } from '@/features/config/usePublicConfig'
 
 export default function FaqPage() {
-  const { t } = useTranslation()
-  const items = t('faq.items', { returnObjects: true }) as Array<{ q: string; a: string }>
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language.startsWith('en') ? 'en' : 'fr'
+  const configured = usePublicConfig().data?.content.faq ?? []
+  const fallback = t('faq.items', { returnObjects: true }) as Array<{ q: string; a: string }>
+  const items = configured.length > 0
+    ? configured.map((item) => ({
+        q: lang === 'en' ? (item.question_en || item.question_fr) : item.question_fr,
+        a: lang === 'en' ? (item.answer_en || item.answer_fr) : item.answer_fr,
+      }))
+    : fallback
 
   return (
     <>

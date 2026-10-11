@@ -208,7 +208,7 @@ export default function PayMerchantPage() {
     setSearchParams({}, { replace: true })
     setCode(scannedCode)
     void lookup(scannedCode)
-  }, [scannedCode])
+  }, [scannedCode, setSearchParams])
 
   async function refreshAll() {
     await queryClient.invalidateQueries({ queryKey: ['merchant-payments'] })

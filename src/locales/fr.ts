@@ -6,6 +6,7 @@ const fr = {
     packs: 'Packs & Tarifs',
     about: 'Qui sommes-nous',
     partners: 'Partenaires',
+    merchants: 'Marchands',
     news: 'Actualités',
     faq: 'FAQ',
     contact: 'Contact',
@@ -174,6 +175,15 @@ const fr = {
       education: 'Éducation',
       transport: 'Transport',
     },
+  },
+  merchants: {
+    title: 'Marchands du réseau',
+    subtitle: 'Trouvez les commerces et services qui acceptent le YEM au sein du réseau CECT.',
+    search: 'Rechercher un marchand, une activité ou une ville…',
+    allCities: 'Toutes les villes',
+    emptyTitle: 'Aucun marchand trouvé',
+    emptyDescription: 'Aucune fiche publiée ne correspond à votre recherche pour le moment.',
+    error: 'Impossible de charger l’annuaire des marchands. Réessayez dans quelques instants.',
   },
   news: {
     title: 'Actualités',

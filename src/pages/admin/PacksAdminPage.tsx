@@ -119,8 +119,23 @@ function versionFields(plan: AdminPackPlan): FormField[] {
   const template = currentTemplate(plan)
   const periodic = plan.family !== 'PERSONNEL'
   const rules = template?.rules ?? {}
+  const eligible = template?.eligible_person_types ?? (plan.family === 'MARCHAND' ? ['legal'] : ['natural', 'legal'])
+  const eligibleScope = eligible.includes('natural') && eligible.includes('legal') ? 'all' : eligible.includes('legal') ? 'legal' : 'natural'
+
   const fields: FormField[] = [
     { name: 'price_xof', label: plan.family === 'CONSOMMATEUR' ? 'Prix FCFA (laisser vide si calculé depuis la valeur de référence)' : 'Prix FCFA', type: 'number', required: plan.family !== 'CONSOMMATEUR', initial: template ? String(template.price_xof) : '' },
+    {
+      name: 'eligible_scope',
+      label: 'Comptes autorisés à voir et souscrire ce pack',
+      type: 'select',
+      required: true,
+      initial: eligibleScope,
+      options: [
+        { value: 'all', label: 'Personnes physiques et morales' },
+        { value: 'natural', label: 'Personnes physiques uniquement' },
+        { value: 'legal', label: 'Personnes morales uniquement' },
+      ],
+    },
   ]
 
   if (periodic) {
@@ -237,10 +252,13 @@ function versionPayload(plan: AdminPackPlan, values: Record<string, string>): Re
   if (values.min_topup_xof !== undefined && values.min_topup_xof !== '') rules.min_topup_xof = Number(values.min_topup_xof)
   if (values.rate_setting_key) rules.rate_setting_key = values.rate_setting_key
 
+  const eligiblePersonTypes = values.eligible_scope === 'legal' ? ['legal'] : values.eligible_scope === 'natural' ? ['natural'] : ['natural', 'legal']
+
   const payload: Record<string, unknown> = {
     reason: values.reason,
     min_operation: values.min_operation || null,
     max_operation: values.max_operation || null,
+    eligible_person_types: eligiblePersonTypes,
     rules,
   }
 

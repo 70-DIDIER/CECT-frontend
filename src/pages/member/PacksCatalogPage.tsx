@@ -360,7 +360,7 @@ export default function PacksCatalogPage() {
   const [tab, setTab] = useState<Tab>('mine')
   const [selected, setSelected] = useState<PackPlan | null>(null)
   const [topupFor, setTopupFor] = useState<{ pack: UserPack; minimum: number } | null>(null)
-  const catalog = useQuery({ queryKey: ['packs-catalog'], queryFn: () => get<PackPlan[]>('/packs'), staleTime: 0 })
+  const catalog = useQuery({ queryKey: ['packs-catalog'], queryFn: () => get<PackPlan[]>('/me/catalog-packs'), staleTime: 0 })
   const mine = useQuery({ queryKey: ['my-packs'], queryFn: () => get<UserPack[]>('/me/packs'), staleTime: 0 })
   const dashboard = useMemberDashboard()
 

@@ -10,11 +10,12 @@ import { ApiError, get, getRaw, newIdempotencyKey, post, put } from '@/lib/api'
 import { ExchangeCard, type Exchange } from '@/features/exchanges/ExchangeCard'
 import { formatYem } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
-import { methodName, usePaymentMethods } from '@/features/payments/types'
+import { methodName, usePayoutMethods } from '@/features/payments/types'
 import type { UserPack } from '@/features/packs/types'
 
 interface PayoutDestination {
   method: string
+  country: string
   phone: string | null
   bank_name: string | null
   account_holder: string | null
@@ -26,13 +27,13 @@ const INPUT = 'w-full rounded-xl border border-[var(--color-border)] bg-[var(--c
 
 function describeDestination(destination: PayoutDestination): string {
   const parts = destination.method === 'BANK_TRANSFER' ? [destination.bank_name, destination.account_number] : [destination.phone]
-  return [methodName(destination.method), ...parts].filter(Boolean).join(' · ')
+  return [methodName(destination.method), destination.country, ...parts].filter(Boolean).join(' · ')
 }
 
 export default function SellYemPage() {
   const queryClient = useQueryClient()
   const [editingDestination, setEditingDestination] = useState(false)
-  const methods = usePaymentMethods()
+  const methods = usePayoutMethods()
   const [packId, setPackId] = useState('')
   const [quantity, setQuantity] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -164,7 +165,8 @@ export default function SellYemPage() {
           submitLabel="Enregistrer"
           fields={[
             { name: 'method', label: 'Moyen', type: 'select', initial: destination.data?.method, options: methods.map((method) => ({ value: method.code, label: method.label })) },
-            { name: 'phone', label: 'Téléphone (T-Money, Flooz) — format +22890123456', initial: destination.data?.phone ?? '' },
+            { name: 'country', label: 'Pays', type: 'select', initial: destination.data?.country ?? 'TG', options: [...new Set(methods.flatMap((method) => method.countries))].map((country) => ({ value: country, label: country === 'TG' ? 'Togo' : country })) },
+            { name: 'phone', label: 'Téléphone Mobile Money — format international (ex. +22890123456)', initial: destination.data?.phone ?? '' },
             { name: 'bank_name', label: 'Banque (virement)', initial: destination.data?.bank_name ?? '' },
             { name: 'account_holder', label: 'Titulaire du compte (virement)', initial: destination.data?.account_holder ?? '' },
             { name: 'account_number', label: 'Numéro de compte (virement)', initial: destination.data?.account_number ?? '' },
@@ -173,6 +175,7 @@ export default function SellYemPage() {
           onSubmit={async (values) => {
             await put('/me/payout-destination', {
               method: values.method,
+              country: values.country,
               phone: values.phone || null,
               bank_name: values.bank_name || null,
               account_holder: values.account_holder || null,

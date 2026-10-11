@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Search, MapPin, Phone } from 'lucide-react'
 import { Section, SectionHeader } from '@/components/ui/Section'
 import { PARTNERS, PARTNER_CATEGORIES, PARTNER_CITIES } from '@/data/partners'
+import { usePublicConfig } from '@/features/config/usePublicConfig'
 
 export default function PartnersPage() {
   const { t, i18n } = useTranslation()
@@ -11,8 +12,12 @@ export default function PartnersPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [city, setCity] = useState('')
+  const configured = usePublicConfig().data?.content.partners ?? []
+  const partners = configured.length > 0 ? configured : PARTNERS
+  const categories = configured.length > 0 ? [...new Set(partners.map((partner) => partner.category))] : [...PARTNER_CATEGORIES]
+  const cities = configured.length > 0 ? [...new Set(partners.map((partner) => partner.city))] : [...PARTNER_CITIES]
 
-  const filtered = PARTNERS.filter((p) => {
+  const filtered = partners.filter((p) => {
     const name = p.name.toLowerCase()
     const q = search.toLowerCase()
     return (
@@ -46,13 +51,13 @@ export default function PartnersPage() {
           </div>
           <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectClass}>
             <option value="">{t('partners.allCategories')}</option>
-            {PARTNER_CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <option key={c} value={c}>{t(`partners.categories.${c}`)}</option>
             ))}
           </select>
           <select value={city} onChange={(e) => setCity(e.target.value)} className={selectClass}>
             <option value="">{t('partners.allCities')}</option>
-            {PARTNER_CITIES.map((c) => (
+            {cities.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -74,12 +79,12 @@ export default function PartnersPage() {
                   </span>
                 </div>
                 <p className="text-sm text-[var(--color-text-muted)] mb-3">
-                  {lang === 'en' ? partner.description_en : partner.description_fr}
+                  {lang === 'en' ? (partner.description_en || partner.description_fr || '') : (partner.description_fr || '')}
                 </p>
                 <div className="space-y-1.5 text-xs text-[var(--color-text-muted)]">
                   <div className="flex items-center gap-1.5">
                     <MapPin size={12} className="text-[var(--color-primary)]" aria-hidden />
-                    <span>{partner.address}</span>
+                    <span>{partner.address || partner.city}</span>
                   </div>
                   {partner.phone && (
                     <div className="flex items-center gap-1.5">

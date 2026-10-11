@@ -4,6 +4,7 @@ import { Users, Calendar, Package, Heart } from 'lucide-react'
 import { Section } from '@/components/ui/Section'
 import { AnimatedCounter } from '@/components/ui/AnimatedCounter'
 import { ease } from '@/lib/motion'
+import { usePublicConfig } from '@/features/config/usePublicConfig'
 
 const stats = (t: (k: string) => string) => [
   { icon: Users, label: t('stats.members'), value: '100+' },
@@ -13,12 +14,22 @@ const stats = (t: (k: string) => string) => [
 ]
 
 export function StatsBar() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const lang = i18n.language.startsWith('en') ? 'en' : 'fr'
+  const configured = usePublicConfig().data?.content.key_figures ?? []
+  const iconByKey = { members: Users, years: Calendar, packs: Package, solidarity: Heart } as const
+  const items = configured.length > 0
+    ? configured.map((item) => ({
+        icon: iconByKey[item.key as keyof typeof iconByKey] ?? Package,
+        label: lang === 'en' ? item.label_en : item.label_fr,
+        value: item.value,
+      }))
+    : stats(t)
 
   return (
     <Section alt className="py-10 md:py-14">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-5 sm:gap-6">
-        {stats(t).map(({ icon: Icon, label, value }, i) => (
+        {items.map(({ icon: Icon, label, value }, i) => (
           <motion.div
             key={label}
             initial={{ opacity: 0, y: 18 }}

@@ -16,6 +16,7 @@ const navLinks = (t: (k: string) => string) => [
   { label: t('nav.packs'), to: '/packs' },
   { label: t('nav.about'), to: '/a-propos' },
   { label: t('nav.partners'), to: '/partenaires' },
+  { label: t('nav.merchants'), to: '/marchands' },
   { label: t('nav.faq'), to: '/faq' },
   { label: t('nav.contact'), to: '/contact' },
 ]

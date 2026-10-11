@@ -6,6 +6,7 @@ const en = {
     packs: 'Packs & Pricing',
     about: 'About Us',
     partners: 'Partners',
+    merchants: 'Merchants',
     news: 'News',
     faq: 'FAQ',
     contact: 'Contact',
@@ -144,6 +145,15 @@ const en = {
       education: 'Education',
       transport: 'Transport',
     },
+  },
+  merchants: {
+    title: 'Network merchants',
+    subtitle: 'Find shops and services accepting YEM across the CECT network.',
+    search: 'Search by merchant, activity or city…',
+    allCities: 'All cities',
+    emptyTitle: 'No merchant found',
+    emptyDescription: 'No published merchant profile matches your search yet.',
+    error: 'Unable to load the merchant directory. Please try again shortly.',
   },
   news: {
     title: 'News',

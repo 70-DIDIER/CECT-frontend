@@ -49,6 +49,10 @@ export default function MembershipPage() {
 
   const state = query.data
   const attempt = state?.payment_attempts[0]
+  const attemptId = attempt?.id
+  const attemptMode = attempt?.mode
+  const attemptStatus = attempt?.status
+  const refetchMembership = query.refetch
   const active = state?.status === 'active' || user?.status === 'active'
 
   useEffect(() => {
@@ -66,14 +70,14 @@ export default function MembershipPage() {
   const mobileMoney = method === 'TMONEY' || method === 'FLOOZ'
 
   useEffect(() => {
-    if (!attempt || attempt.mode !== 'psp' || !isInFlight(attempt.status)) return
+    if (!attemptId || attemptMode !== 'psp' || !attemptStatus || !isInFlight(attemptStatus)) return
 
     let cancelled = false
 
     const reconcile = async () => {
       try {
-        await post(`/me/membership/payments/${attempt.id}/refresh`)
-        if (!cancelled) await query.refetch()
+        await post(`/me/membership/payments/${attemptId}/refresh`)
+        if (!cancelled) await refetchMembership()
       } catch {
         // Webhook processing remains the primary path; polling is only a fallback.
       }
@@ -86,7 +90,7 @@ export default function MembershipPage() {
       cancelled = true
       window.clearInterval(timer)
     }
-  }, [attempt?.id, attempt?.mode, attempt?.status])
+  }, [attemptId, attemptMode, attemptStatus, refetchMembership])
 
   const startPayment = useMutation({
     mutationFn: () =>

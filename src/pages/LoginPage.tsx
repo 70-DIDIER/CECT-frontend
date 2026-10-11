@@ -151,12 +151,20 @@ export default function LoginPage() {
           </form>
           )}
 
-          <p className="mt-6 text-center text-sm text-[var(--color-text-muted)]">
-            {t('auth.login.noAccount')}{' '}
-            <Link to="/inscription" className="text-[var(--color-primary)] font-medium hover:underline">
-              {t('auth.login.register')}
-            </Link>
-          </p>
+          <div className="mt-6 space-y-2 text-center text-sm text-[var(--color-text-muted)]">
+            <p>
+              {t('auth.login.noAccount')}{' '}
+              <Link to="/inscription" className="text-[var(--color-primary)] font-medium hover:underline">
+                {t('auth.login.register')}
+              </Link>
+            </p>
+            <p>
+              Compte interne nouvellement créé ?{' '}
+              <Link to="/activation-compte-interne" className="font-medium text-[var(--color-primary)] hover:underline">
+                Activer le compte
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </>

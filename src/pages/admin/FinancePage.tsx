@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Banknote, CheckCircle2, CircleDashed, CircleX, Hourglass, Printer, RefreshCw, Send, TriangleAlert, type LucideIcon } from 'lucide-react'
+import { Banknote, CheckCircle2, CircleDashed, CircleX, Download, FileSpreadsheet, Hourglass, Printer, RefreshCw, Send, TriangleAlert, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { HBarList } from '@/components/dashboard/HBarList'
 import { Panel } from '@/components/dashboard/Panel'
@@ -9,7 +9,7 @@ import { SegmentedControl } from '@/components/dashboard/SegmentedControl'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import type { Tone } from '@/components/dashboard/tones'
 import { FormDialog } from '@/components/ui/FormDialog'
-import { apiUrl, get, getRaw, newIdempotencyKey, post } from '@/lib/api'
+import { apiUrl, downloadFile, get, getRaw, newIdempotencyKey, post } from '@/lib/api'
 import { formatBps, formatDateMedium, formatXof, formatYem } from '@/lib/format'
 import { methodName, usePaymentMethods } from '@/features/payments/types'
 
@@ -74,6 +74,7 @@ function Figure({ label, value, hint }: { label: string; value: string; hint?: s
 }
 
 function ReportView() {
+  const { can } = useAuth()
   const [preset, setPreset] = useState<string>('30')
   const period = periodFor(preset)
   const query = useQuery({ queryKey: ['finance-report', period.from, period.to], queryFn: () => get<Report>('/admin/reports/summary', period) })
@@ -83,15 +84,35 @@ function ReportView() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SegmentedControl label="Période" value={preset} onChange={setPreset} options={PRESETS.map((item) => ({ value: item.value, label: item.label }))} />
-        <a
-          href={apiUrl('/admin/reports/summary/print', period)}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold hover:bg-[var(--dash-bg)]"
-        >
-          <Printer size={15} aria-hidden />
-          Version imprimable
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href={apiUrl('/admin/reports/summary/print', period)}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold hover:bg-[var(--dash-bg)]"
+          >
+            <Printer size={15} aria-hidden />
+            Version imprimable
+          </a>
+          {can('reports.export') && (
+            <>
+              <button
+                type="button"
+                onClick={() => void downloadFile('/admin/reports/summary.pdf?' + new URLSearchParams(period).toString(), 'cect-rapport.pdf')}
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold hover:bg-[var(--dash-bg)]"
+              >
+                <Download size={15} aria-hidden /> PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => void downloadFile('/admin/reports/summary.xlsx?' + new URLSearchParams(period).toString(), 'cect-rapport.xlsx')}
+                className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[var(--color-border)] px-4 text-sm font-semibold hover:bg-[var(--dash-bg)]"
+              >
+                <FileSpreadsheet size={15} aria-hidden /> Excel
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {query.isPending && <div className="h-48 animate-pulse rounded-3xl bg-[var(--chart-track)]" />}
