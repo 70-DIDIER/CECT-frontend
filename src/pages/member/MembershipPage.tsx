@@ -21,19 +21,11 @@ interface MembershipState {
 
 const QUERY_KEY = ['membership']
 
-function normalizeTogoPhone(value: string): string {
-  const digits = value.replace(/\D/g, '')
-  if (digits.length === 8) return `+228${digits}`
-  if (digits.length === 11 && digits.startsWith('228')) return `+${digits}`
-  return value.trim()
-}
-
 export default function MembershipPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user, refresh } = useAuth()
   const [method, setMethod] = useState('TMONEY')
-  const [paymentPhone, setPaymentPhone] = useState(user?.phone ?? '')
   const [choosing, setChoosing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,18 +48,12 @@ export default function MembershipPage() {
   const active = state?.status === 'active' || user?.status === 'active'
 
   useEffect(() => {
-    if (user?.phone && paymentPhone === '') setPaymentPhone(user.phone)
-  }, [paymentPhone, user?.phone])
-
-  useEffect(() => {
     if (!active) return
     void refresh().then(() => {
       queryClient.clear()
       navigate('/espace', { replace: true })
     })
   }, [active, navigate, queryClient, refresh])
-
-  const mobileMoney = method === 'TMONEY' || method === 'FLOOZ'
 
   useEffect(() => {
     if (!attemptId || attemptMode !== 'psp' || !attemptStatus || !isInFlight(attemptStatus)) return
@@ -96,7 +82,7 @@ export default function MembershipPage() {
     mutationFn: () =>
       post<PaymentAttempt>(
         '/me/membership/payments',
-        { method, payment_phone: mobileMoney ? normalizeTogoPhone(paymentPhone) : null },
+        { method },
         newIdempotencyKey(),
       ),
     onSuccess: () => {
@@ -164,31 +150,9 @@ export default function MembershipPage() {
                     net={state.payment_quote.net_amount}
                     fee={state.payment_quote.fee_amount}
                     total={state.payment_quote.total_amount}
-                    externalFees={mobileMoney}
                   />
                 )}
                 <MethodPicker value={method} onChange={setMethod} />
-                {mobileMoney && (
-                  <div className="space-y-1.5">
-                    <label htmlFor="payment-phone" className="block text-sm font-semibold text-[var(--color-text)]">
-                      Numéro à débiter
-                    </label>
-                    <input
-                      id="payment-phone"
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      value={paymentPhone}
-                      onChange={(event) => setPaymentPhone(event.target.value)}
-                      placeholder="+228 90 12 34 56"
-                      required
-                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                    />
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Numéro T-Money ou Flooz utilisé pour ce paiement. Vous pouvez le modifier sans changer votre profil.
-                    </p>
-                  </div>
-                )}
                 {error && (
                   <p role="alert" className="text-sm text-[var(--color-danger)]">
                     {error}

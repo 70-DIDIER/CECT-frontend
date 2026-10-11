@@ -74,7 +74,7 @@ const btnSecondary = 'inline-flex min-h-[40px] items-center justify-center gap-2
 const TABS: Array<{ value: Tab; label: string; icon: typeof Activity }> = [
   { value: 'audit', label: 'Audit métier', icon: ShieldCheck },
   { value: 'security', label: 'Sécurité', icon: ShieldAlert },
-  { value: 'payments', label: 'Paiements & webhooks', icon: Webhook },
+  { value: 'payments', label: 'Paiements simulés', icon: Webhook },
   { value: 'ops', label: 'Supervision', icon: Activity },
 ]
 
@@ -135,7 +135,7 @@ export default function AuditPage() {
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-text)]">Audit & supervision</h1>
             <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-muted)]">
-              Journal métier, sécurité, intégrité des webhooks et état opérationnel de la plateforme.
+              Journal métier, sécurité, événements du simulateur et état opérationnel de la plateforme.
             </p>
           </div>
           {can('reports.export') && can('audit.view') && (
@@ -235,7 +235,7 @@ export default function AuditPage() {
                   <div key={attempt.id} className="flex flex-wrap items-center gap-4 px-5 py-4 sm:px-6">
                     <div className="min-w-0 flex-1 basis-60">
                       <p className="font-mono text-xs font-semibold">{attempt.id}</p>
-                      <p className="mt-1 text-xs text-[var(--color-text-muted)]">{attempt.provider} · {attempt.method ?? '—'} · {attempt.provider_transaction_id ?? 'sans ID prestataire'}</p>
+                      <p className="mt-1 text-xs text-[var(--color-text-muted)]">{attempt.provider === 'fake' ? 'Simulateur CECT' : attempt.provider === 'manual' ? 'Simulation manuelle' : 'Historique externe'} · {attempt.method ?? '—'} · {attempt.provider_transaction_id ?? 'sans ID'}</p>
                     </div>
                     <StatusBadge label={attempt.status} tone={attempt.status === 'approved' ? 'success' : 'warning'} />
                   </div>
@@ -243,12 +243,12 @@ export default function AuditPage() {
               </div>
             </Panel>
 
-            <Panel title="Webhooks prestataires" subtitle="Événements reçus et état de leur traitement." action={<button type="button" className={btnSecondary} onClick={() => void webhooks.refetch()}><RefreshCw size={15} /> Actualiser</button>} flush>
+            <Panel title="Événements du simulateur" subtitle="Événements internes de recette et état de leur traitement." action={<button type="button" className={btnSecondary} onClick={() => void webhooks.refetch()}><RefreshCw size={15} /> Actualiser</button>} flush>
               <div className="px-5 pb-4 sm:px-6">
                 <select value={provider} onChange={(event) => setProvider(event.target.value)} className="min-h-[44px] rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 text-sm">
-                  <option value="all">Tous les prestataires</option>
-                  <option value="fedapay">FedaPay</option>
-                  <option value="manual">Manuel</option>
+                  <option value="all">Tous les événements</option>
+                  <option value="fake">Simulateur CECT</option>
+                  <option value="manual">Simulation manuelle</option>
                 </select>
               </div>
               {webhooks.data?.length === 0 && <Empty>Aucun webhook reçu.</Empty>}
@@ -257,7 +257,7 @@ export default function AuditPage() {
                   <div key={event.id} className="flex flex-wrap items-center gap-4 px-5 py-4 sm:px-6">
                     <div className="min-w-0 flex-1 basis-64">
                       <p className="font-mono text-xs font-semibold">{event.event_name ?? event.provider_event_id}</p>
-                      <p className="mt-1 text-xs text-[var(--color-text-muted)]">{event.provider} · tx {event.provider_transaction_id ?? '—'} · {formatDateTime(event.received_at)}</p>
+                      <p className="mt-1 text-xs text-[var(--color-text-muted)]">{event.provider === 'fake' ? 'Simulateur CECT' : event.provider === 'manual' ? 'Simulation manuelle' : 'Historique externe'} · tx {event.provider_transaction_id ?? '—'} · {formatDateTime(event.received_at)}</p>
                       {event.error && <p className="mt-1 text-xs text-[var(--color-danger)]">{event.error}</p>}
                     </div>
                     <StatusBadge label={event.status} tone={event.status === 'processed' ? 'success' : event.status === 'failed' ? 'danger' : 'warning'} />

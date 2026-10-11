@@ -52,6 +52,10 @@ const PERIOD_OPTIONS = [
 const SOURCE_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
 
 const METHOD_ICONS: Record<string, LucideIcon> = {
+  'T-Money (simulation)': Smartphone,
+  'Flooz (simulation)': Smartphone,
+  'Espèces (simulation)': Banknote,
+  'Virement bancaire (simulation)': Landmark,
   'T-Money': Smartphone,
   Flooz: Smartphone,
   Espèces: Banknote,
@@ -59,10 +63,10 @@ const METHOD_ICONS: Record<string, LucideIcon> = {
 }
 
 const GREETING_BY_ROLE: Record<UserRole, string> = {
-  administrateur: 'Voici l’activité de la coopérative sur la période choisie.',
-  superadmin: 'Vue d’ensemble de la plateforme, de l’activité et de la sécurité.',
-  validateur: 'Voici ce qui attend votre décision aujourd’hui.',
-  comptabilite: 'Suivi des encaissements et des versements dus.',
+  administrateur: 'Gérez les membres, le catalogue, les contenus et le paramétrage métier autorisé.',
+  superadmin: 'Pilotez la gouvernance, la sécurité, les accès, les paramètres critiques et la santé globale.',
+  validateur: 'Contrôlez uniquement les réceptions YEM attendues, leurs preuves et les anomalies associées.',
+  comptabilite: 'Supervisez les paiements simulés, les contre-valeurs, les payouts et les rapprochements.',
   utilisateur: '',
 }
 
@@ -210,6 +214,59 @@ function Dashboard({ data, days, onChangeDays, role, name }: { data: AdminDashbo
         </Panel>
       )}
 
+      {role === 'validateur' && (
+        <Panel title="Poste de travail Validateur" subtitle="Confirmer uniquement l’arrivée réelle des YEM sur le Pernum CECT ; ne jamais fixer la contre-valeur FCFA ni marquer un payout payé.">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Link to="/admin/validations" className="flex min-h-[82px] items-center gap-3 rounded-2xl border border-[var(--color-border)] p-4 transition-colors hover:bg-[var(--dash-bg)]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: TONES.info.bg, color: TONES.info.fg }}>
+                <CircleCheck size={20} aria-hidden />
+              </span>
+              <span className="flex-1">
+                <strong className="block text-sm">Réceptions YEM à contrôler</strong>
+                <span className="mt-1 block text-xs text-[var(--color-text-muted)]">Quantité reçue, référence externe, preuve, rejet ou litige</span>
+              </span>
+              <ChevronRight size={16} aria-hidden />
+            </Link>
+            <div className="flex min-h-[82px] items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-bg)] p-4">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: TONES.success.bg, color: TONES.success.fg }}>
+                <ShieldCheck size={20} aria-hidden />
+              </span>
+              <span className="flex-1">
+                <strong className="block text-sm">Séparation des tâches active</strong>
+                <span className="mt-1 block text-xs text-[var(--color-text-muted)]">Les paiements et règlements appartiennent à Comptabilité.</span>
+              </span>
+            </div>
+          </div>
+        </Panel>
+      )}
+
+      {role === 'comptabilite' && (
+        <Panel title="Poste de travail Comptabilité" subtitle="Contrôler les paiements simulés, traiter les contre-valeurs éligibles et assurer le rapprochement.">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Link to="/admin/validations" className="flex min-h-[82px] items-center gap-3 rounded-2xl border border-[var(--color-border)] p-4 transition-colors hover:bg-[var(--dash-bg)]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: TONES.gold.bg, color: TONES.gold.fg }}>
+                <ReceiptText size={20} aria-hidden />
+              </span>
+              <span className="flex-1">
+                <strong className="block text-sm">Paiements à contrôler</strong>
+                <span className="mt-1 block text-xs text-[var(--color-text-muted)]">Banque / espèces simulées et écarts de montant</span>
+              </span>
+              <ChevronRight size={16} aria-hidden />
+            </Link>
+            <Link to="/admin/finance" className="flex min-h-[82px] items-center gap-3 rounded-2xl border border-[var(--color-border)] p-4 transition-colors hover:bg-[var(--dash-bg)]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: TONES.info.bg, color: TONES.info.fg }}>
+                <Landmark size={20} aria-hidden />
+              </span>
+              <span className="flex-1">
+                <strong className="block text-sm">Payouts & rapprochement</strong>
+                <span className="mt-1 block text-xs text-[var(--color-text-muted)]">Reste dû, échecs, retries et règlements manuels</span>
+              </span>
+              <ChevronRight size={16} aria-hidden />
+            </Link>
+          </div>
+        </Panel>
+      )}
+
       {/* Indicateurs */}
       {canReport ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -315,9 +372,9 @@ function Dashboard({ data, days, onChangeDays, role, name }: { data: AdminDashbo
               </div>
             ) : (
               <ul className="-mx-1 space-y-1">
-                <PendingRow icon={Banknote} label="Paiements manuels" hint="Espèces, dépôts, virements" count={data.pending_validations.payments} tone="gold" />
-                <PendingRow icon={Coins} label="Réceptions de YEM" hint="À confirmer" count={data.pending_validations.yem} tone="info" />
-                <PendingRow icon={Store} label="Paiements marchands" hint="Litiges, confirmations" count={data.pending_validations.merchant} tone="violet" />
+                {role !== 'validateur' && <PendingRow icon={Banknote} label="Paiements manuels simulés" hint="Banque / espèces à contrôler" count={data.pending_validations.payments} tone="gold" />}
+                {role !== 'comptabilite' && <PendingRow icon={Coins} label="Réceptions de YEM" hint="Arrivée sur le Pernum CECT" count={data.pending_validations.yem} tone="info" />}
+                {role !== 'comptabilite' && <PendingRow icon={Store} label="Flux marchands à vérifier" hint="Anomalies et confirmations autorisées" count={data.pending_validations.merchant} tone="violet" />
               </ul>
             )}
           </Panel>
@@ -456,13 +513,22 @@ function Dashboard({ data, days, onChangeDays, role, name }: { data: AdminDashbo
               <span className="flex-1 text-sm font-bold">Ouvrir la file de validation</span>
               <ChevronRight size={16} aria-hidden />
             </Link>
-            <Link to="/admin/membres" className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-[var(--color-border)] p-4 transition-colors hover:bg-[var(--dash-bg)]">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: TONES.info.bg, color: TONES.info.fg }}>
-                <Users size={20} aria-hidden />
-              </span>
-              <span className="flex-1 text-sm font-bold">Consulter un membre</span>
-              <ChevronRight size={16} aria-hidden />
-            </Link>
+            {role === 'validateur' ? (
+              <div className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-bg)] p-4">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: TONES.success.bg, color: TONES.success.fg }}>
+                  <ShieldCheck size={20} aria-hidden />
+                </span>
+                <span className="flex-1 text-sm font-bold">Aucun accès financier : validation YEM uniquement</span>
+              </div>
+            ) : (
+              <Link to="/admin/membres" className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-[var(--color-border)] p-4 transition-colors hover:bg-[var(--dash-bg)]">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: TONES.info.bg, color: TONES.info.fg }}>
+                  <Users size={20} aria-hidden />
+                </span>
+                <span className="flex-1 text-sm font-bold">Consulter un membre</span>
+                <ChevronRight size={16} aria-hidden />
+              </Link>
+            )}
           </div>
         </Panel>
       )}

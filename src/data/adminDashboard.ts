@@ -85,10 +85,10 @@ interface ApiDashboard {
 }
 
 const METHOD_LABELS: Record<string, string> = {
-  TMONEY: 'T-Money',
-  FLOOZ: 'Flooz',
-  CASH: 'Espèces',
-  BANK_TRANSFER: 'Virement bancaire',
+  TMONEY: 'T-Money (simulation)',
+  FLOOZ: 'Flooz (simulation)',
+  CASH: 'Espèces (simulation)',
+  BANK_TRANSFER: 'Virement bancaire (simulation)',
 }
 
 export function methodLabel(method: string | null): string | null {

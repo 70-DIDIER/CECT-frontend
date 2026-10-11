@@ -17,6 +17,22 @@ const ROLE_LABELS: Record<UserRole, string> = {
   utilisateur: 'Membre',
 }
 
+const ROLE_BRAND: Record<Exclude<UserRole, 'utilisateur'>, { title: string; subtitle: string }> = {
+  administrateur: { title: 'CECT Administration', subtitle: 'Membres, catalogue & paramétrage métier' },
+  superadmin: { title: 'CECT Superadmin', subtitle: 'Gouvernance, sécurité & contrôle global' },
+  validateur: { title: 'CECT Validation YEM', subtitle: 'Réceptions YEM, preuves & anomalies' },
+  comptabilite: { title: 'CECT Comptabilité', subtitle: 'Paiements, versements & rapprochement' },
+}
+
+function roleAwareLabel(item: AdminNavItem, role: UserRole): string {
+  if (item.to === '/admin/validations') {
+    if (role === 'validateur') return 'Réceptions YEM'
+    if (role === 'comptabilite') return 'Paiements à contrôler'
+  }
+  if (item.to === '/admin/finance' && role === 'comptabilite') return 'Payouts & rapprochement'
+  return item.label
+}
+
 interface AdminNavItem extends NavItem {
   section: string
   permissions: string[]
@@ -59,7 +75,11 @@ export function AdminLayout() {
       title,
       items: visible
         .filter((item) => item.section === title)
-        .map(({ section: _section, permissions: _permissions, ...item }) => (item.to === '/admin/validations' ? { ...item, badge: pendingCount } : item)),
+        .map(({ section: _section, permissions: _permissions, ...item }) => ({
+          ...item,
+          label: roleAwareLabel({ ...item, section: title, permissions: _permissions }, role),
+          ...(item.to === '/admin/validations' ? { badge: pendingCount } : {}),
+        })),
     }))
   }, [role, pendingCount, can])
 
@@ -70,6 +90,7 @@ export function AdminLayout() {
   const current = NAV.filter((item) => item.to && (item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))).sort(
     (a, b) => (b.to?.length ?? 0) - (a.to?.length ?? 0)
   )[0]
+  const brand = ROLE_BRAND[user.role]
 
   async function handleLogout() {
     await logout()
@@ -78,11 +99,11 @@ export function AdminLayout() {
 
   return (
     <AppShell
-      brand={{ title: 'CECT Admin', subtitle: 'Coopérative CECT Togo' }}
+      brand={brand}
       sections={sections}
       user={{ name: user.name, roleLabel: ROLE_LABELS[user.role] }}
       onLogout={() => void handleLogout()}
-      pageTitle={current?.label ?? 'Administration'}
+      pageTitle={current ? roleAwareLabel(current, user.role) : 'Administration'}
     >
       {publicConfig.data?.test_mode && (
         <div role="status" className="mb-5 rounded-2xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-950">

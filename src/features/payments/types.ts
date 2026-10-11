@@ -5,6 +5,7 @@ export type PaymentStatus = 'created' | 'pending' | 'approved' | 'declined' | 'c
 export interface PaymentAttempt {
   id: string
   reference: string
+  provider: string
   method: string | null
   mode: 'psp' | 'manual'
   status: PaymentStatus
@@ -21,43 +22,35 @@ export interface PaymentAttempt {
 }
 
 export const PAYMENT_METHODS: ReadonlyArray<{ code: string; label: string; hint: string; countries: string[] }> = [
-  { code: 'TMONEY', label: 'T-Money', hint: 'Paiement mobile', countries: ['TG'] },
-  { code: 'FLOOZ', label: 'Flooz', hint: 'Paiement mobile', countries: ['TG'] },
+  { code: 'TMONEY', label: 'T-Money (simulation)', hint: 'Canal Togo simulé · aucun débit réel', countries: ['TG'] },
+  { code: 'FLOOZ', label: 'Flooz (simulation)', hint: 'Canal Togo simulé · aucun débit réel', countries: ['TG'] },
+  { code: 'BANK_TRANSFER', label: 'Virement bancaire (simulation)', hint: 'Aucun virement réel en recette', countries: [] },
+  { code: 'CASH', label: 'Espèces (simulation)', hint: 'Aucun encaissement réel en recette', countries: [] },
 ]
-
-const OFFERED_METHOD_CODES: ReadonlyArray<string> = ['TMONEY', 'FLOOZ']
 
 export function usePaymentMethods(): ReadonlyArray<{ code: string; label: string; hint: string; countries: string[] }> {
   const config = usePublicConfig().data
   if (!config) return PAYMENT_METHODS
-  return config.payment_methods.filter((method) => OFFERED_METHOD_CODES.includes(method.code)).map((method) => ({
+
+  const methods = config.payment_methods.map((method) => ({
     code: method.code,
     label: method.label,
-    hint: method.channel === 'mobile_money' ? 'Paiement mobile' : 'Validé par un validateur après réception',
-    countries: method.countries ?? ['TG'],
+    hint: method.channel === 'mobile_money'
+      ? 'Simulation interne CECT · aucun portefeuille réel débité'
+      : 'Simulation interne CECT · contrôle manuel sans mouvement d’argent',
+    countries: method.countries ?? [],
   }))
+
+  return methods.length > 0 ? methods : PAYMENT_METHODS
 }
 
 export function usePayoutMethods(): ReadonlyArray<{ code: string; label: string; hint: string; countries: string[] }> {
-  const config = usePublicConfig().data
-  if (!config) {
-    return [
-      ...PAYMENT_METHODS,
-      { code: 'BANK_TRANSFER', label: 'Virement bancaire', hint: 'Versement bancaire', countries: ['TG'] },
-      { code: 'CASH', label: 'Espèces', hint: 'Règlement manuel', countries: ['TG'] },
-    ]
-  }
-
-  return config.payment_methods.map((method) => ({
-    code: method.code,
-    label: method.label,
-    hint: method.channel === 'mobile_money' ? 'Paiement mobile' : method.code === 'BANK_TRANSFER' ? 'Virement bancaire' : 'Règlement manuel',
-    countries: method.countries ?? ['TG'],
-  }))
+  return usePaymentMethods()
 }
 
 export function methodName(code: string | null): string {
-  return PAYMENT_METHODS.find((method) => method.code === code)?.label ?? code ?? '—'
+  if (code === null) return '—'
+  return PAYMENT_METHODS.find((method) => method.code === code)?.label ?? code
 }
 
 export function isInFlight(status: PaymentStatus): boolean {
@@ -65,9 +58,9 @@ export function isInFlight(status: PaymentStatus): boolean {
 }
 
 export const PAYMENT_FAILURE_LABELS: Partial<Record<PaymentStatus, string>> = {
-  declined: 'Le paiement a été refusé.',
-  canceled: 'Le paiement a été annulé.',
-  expired: 'Le paiement a expiré.',
-  failed: 'Le paiement a échoué.',
-  mismatch: 'Le montant reçu ne correspond pas au montant dû : la CECT va vous contacter.',
+  declined: 'Scénario simulé : paiement refusé.',
+  canceled: 'Scénario simulé : paiement annulé.',
+  expired: 'La tentative simulée a expiré.',
+  failed: 'La simulation a échoué.',
+  mismatch: 'Le montant simulé reçu ne correspond pas au montant attendu.',
 }
