@@ -7,6 +7,7 @@ import {
   Activity,
   ArrowRight,
   Banknote,
+  Boxes,
   CheckCircle2,
   ChevronRight,
   CircleCheck,
@@ -19,8 +20,10 @@ import {
   ShieldCheck,
   Smartphone,
   Store,
+  Settings,
   TrendingUp,
   UserPlus,
+  UserCog,
   Users,
   Wallet,
   type LucideIcon,
@@ -142,6 +145,12 @@ function Dashboard({ data, days, onChangeDays, role, name }: { data: AdminDashbo
             <p className="text-xs font-semibold uppercase tracking-widest text-white/70">{formatDateLong(new Date())}</p>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">Bonjour, {firstNameOf(name)}</h1>
             <p className="mt-1.5 max-w-xl text-sm text-white/80">{GREETING_BY_ROLE[role]}</p>
+            {role === 'superadmin' && (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider text-white backdrop-blur">
+                <ShieldCheck size={14} aria-hidden />
+                Superadmin · accès complet
+              </div>
+            )}
             {canValidate && totalPending > 0 && (
               <Link
                 to="/admin/validations"
@@ -167,6 +176,39 @@ function Dashboard({ data, days, onChangeDays, role, name }: { data: AdminDashbo
           )}
         </div>
       </motion.section>
+
+      {role === 'superadmin' && (
+        <Panel
+          title="Centre de contrôle Superadmin"
+          subtitle="Gouvernance, sécurité et paramétrage global de la plateforme."
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[
+              { to: '/admin/access', label: 'Accès & rôles', hint: 'Comptes internes, RBAC et permissions', icon: UserCog },
+              { to: '/admin/configuration', label: 'Configuration critique', hint: 'Taux, limites, politiques et paramètres globaux', icon: Settings },
+              { to: '/admin/audit', label: 'Audit & sécurité', hint: 'Événements, intégrité et supervision', icon: ShieldCheck },
+              { to: '/admin/packs', label: 'Catalogue des packs', hint: 'Créer, versionner, publier et retirer', icon: Boxes },
+              { to: '/admin/finance', label: 'Finance & versements', hint: 'Paiements, rapprochements et payouts', icon: Landmark },
+              { to: '/admin/export', label: 'Rapports & exports', hint: 'Exports, snapshots, PDF et Excel', icon: Download },
+            ].map(({ to, label, hint, icon: Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                className="group flex min-h-[88px] items-center gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--color-primary)]/40 hover:shadow-sm"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
+                  <Icon size={20} aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <strong className="block text-sm text-[var(--color-text)]">{label}</strong>
+                  <span className="mt-1 block text-xs leading-relaxed text-[var(--color-text-muted)]">{hint}</span>
+                </span>
+                <ChevronRight size={16} aria-hidden className="shrink-0 text-[var(--color-text-muted)] transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            ))}
+          </div>
+        </Panel>
+      )}
 
       {/* Indicateurs */}
       {canReport ? (
