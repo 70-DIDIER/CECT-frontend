@@ -28,6 +28,7 @@ const PacksCatalogPage = lazy(() => import('@/pages/member/PacksCatalogPage'))
 const PayMerchantPage  = lazy(() => import('@/pages/member/PayMerchantPage'))
 const SellYemPage      = lazy(() => import('@/pages/member/SellYemPage'))
 const MerchantPage     = lazy(() => import('@/pages/member/MerchantPage'))
+const NotificationsPage = lazy(() => import('@/pages/member/NotificationsPage'))
 const NotFoundPage     = lazy(() => import('@/pages/NotFoundPage'))
 
 // Admin pages
@@ -105,6 +106,7 @@ const router = createBrowserRouter([
       { path: 'payer', element: <S><PayMerchantPage /></S> },
       { path: 'vendre', element: <S><SellYemPage /></S> },
       { path: 'marchand', element: <S><MerchantPage /></S> },
+      { path: 'notifications', element: <S><NotificationsPage /></S> },
     ],
   },
 
