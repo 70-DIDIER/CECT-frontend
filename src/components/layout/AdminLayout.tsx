@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CircleCheck, Download, Landmark, LayoutDashboard, Settings, Users } from 'lucide-react'
+import { Boxes, CircleCheck, Download, Landmark, LayoutDashboard, Settings, Users } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { fetchAdminDashboard } from '@/data/adminDashboard'
 import { isAdminRole, type UserRole } from '@/lib/roles'
@@ -26,6 +26,7 @@ const NAV: AdminNavItem[] = [
   { section: 'Opérations', to: '/admin/validations', label: 'Validations', icon: CircleCheck, permissions: ['payments.validate_manual', 'yem_validations.view'] },
   { section: 'Opérations', to: '/admin/finance', label: 'Finance', icon: Landmark, permissions: ['reports.view', 'payouts.view'] },
   { section: 'Gestion', to: '/admin/membres', label: 'Membres', icon: Users, permissions: ['members.view'] },
+  { section: 'Gestion', to: '/admin/packs', label: 'Packs', icon: Boxes, permissions: ['packs.view'] },
   { section: 'Gestion', to: '/admin/configuration', label: 'Configuration', icon: Settings, permissions: ['settings.view'] },
   { section: 'Gestion', to: '/admin/export', label: 'Exports', icon: Download, permissions: ['reports.export', 'reports.view'] },
 ]
