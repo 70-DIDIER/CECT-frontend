@@ -34,6 +34,7 @@ const MembresPage        = lazy(() => import('@/pages/admin/MembresPage'))
 const ValidationsPage    = lazy(() => import('@/pages/admin/ValidationsPage'))
 const FinancePage        = lazy(() => import('@/pages/admin/FinancePage'))
 const ConfigurationPage  = lazy(() => import('@/pages/admin/ConfigurationPage'))
+const PacksAdminPage     = lazy(() => import('@/pages/admin/PacksAdminPage'))
 const ExportPage         = lazy(() => import('@/pages/admin/ExportPage'))
 
 function Loading() {
@@ -107,6 +108,7 @@ const router = createBrowserRouter([
       { index: true,              element: <S><AdminHomePage /></S> },
       { path: 'validations',      element: <S><ValidationsPage /></S> },
       { path: 'membres',          element: <S><MembresPage /></S> },
+      { path: 'packs',            element: <S><PacksAdminPage /></S> },
       { path: 'finance',          element: <S><FinancePage /></S> },
       { path: 'configuration',    element: <S><ConfigurationPage /></S> },
       { path: 'export',           element: <S><ExportPage /></S> },
