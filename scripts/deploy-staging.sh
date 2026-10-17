@@ -53,7 +53,7 @@ rsync -a dist/ "$RELEASE/"
 find "$RELEASE" -type d -exec chmod 755 {} +
 find "$RELEASE" -type f -exec chmod 644 {} +
 grep -q '/logos/CECT_logo_64.png' "$RELEASE/index.html"
-for asset in $(grep -oE '/assets/[^"]+\\.(js|css)' "$RELEASE/index.html" | sort -u); do
+for asset in $(grep -oE '/assets/[^"]+\.(js|css)' "$RELEASE/index.html" | sort -u); do
   test -s "$RELEASE${asset}" || { echo "Missing built asset: $asset"; exit 1; }
 done
 
@@ -75,7 +75,7 @@ for path in /connexion /inscription /packs /espace /espace/marchand; do
   curl --fail --silent --show-error --max-time 12 -o /dev/null "$PUBLIC_ORIGIN$path"
 done
 curl --fail --silent --show-error --max-time 12 -o /dev/null "$PUBLIC_ORIGIN/logos/CECT_logo_64.png"
-for asset in $(grep -oE '/assets/[^"]+\\.(js|css)' "$RELEASE/index.html" | sort -u); do
+for asset in $(grep -oE '/assets/[^"]+\.(js|css)' "$RELEASE/index.html" | sort -u); do
   curl --fail --silent --show-error --max-time 12 -o /dev/null "$PUBLIC_ORIGIN$asset"
 done
 curl --fail --silent --show-error --max-time 12 "$API_ORIGIN/api/v1/health" >/dev/null
