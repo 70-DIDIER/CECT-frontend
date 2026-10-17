@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { formatXof } from '@/lib/format'
 import { CountrySelect } from '@/components/ui/CountrySelect'
 import { DEFAULT_COUNTRY, findCountry, toInternationalPhone } from '@/lib/countries'
 import type { CountryCode } from 'libphonenumber-js/min'
@@ -73,6 +74,7 @@ export default function RegisterPage() {
   const { t } = useTranslation()
   const [step, setStep] = useState(0)
   const navigate = useNavigate()
+  const publicFees = usePublicConfig().data?.membership_fees
   const legalForms = usePublicConfig().data?.legal_forms ?? ['SARL', 'SA', 'SAS', 'SASU', 'EURL', 'GIE', 'Association', 'Coopérative', 'Auto-entrepreneur', 'Autre']
   const { user, verifyEmail, resendOtp } = useAuth()
   const [verification, setVerification] = useState<{ challengeId: string; sentTo: string } | null>(null)
@@ -223,6 +225,16 @@ export default function RegisterPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Frais d'adhésion à la coopérative</div>
+                    <div className="mt-1 text-xl font-extrabold text-[var(--color-primary)]" aria-live="polite">
+                      {publicFees ? formatXof(personType === 'legal' ? publicFees.legal_person : publicFees.natural_person) : 'Chargement du tarif…'}
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                      Tarif défini par le Superadmin. Aucun règlement ici : paiement simulé après vérification de l'e-mail.
+                    </p>
                   </div>
 
                   {personType === 'legal' && (

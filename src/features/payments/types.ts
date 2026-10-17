@@ -37,6 +37,9 @@ const NETWORK_BRANDS: Record<string, { label: string; logo: string }> = {
   WAVE: { label: 'Wave', logo: '/payment-logos/wave.png' },
   ORANGE_MONEY: { label: 'Orange Money', logo: '/payment-logos/orange-money.svg' },
   MPESA: { label: 'M-Pesa', logo: '/payment-logos/mpesa.svg' },
+  MTN_MOMO: { label: 'MTN Mobile Money', logo: '/payment-logos/mtn.svg' },
+  AIRTEL_MONEY: { label: 'Airtel Money', logo: '/payment-logos/airtel.svg' },
+  CORIS_MONEY: { label: 'Coris Money', logo: '/payment-logos/coris.svg' },
 }
 
 export const PAYMENT_METHODS: ReadonlyArray<PaymentMethodOption> = [
@@ -59,18 +62,16 @@ export function usePaymentMethods(country: string = 'TG'): ReadonlyArray<Payment
       hint: 'Paiement Mobile Money simulé',
       logo: NETWORK_BRANDS[method.code]?.logo ?? null,
     }))
-  if (mobile.length > 0) return mobile
-
-  // Countries outside Africa or without a documented mobile-money network
-  // receive the card simulator, never an invented mobile provider.
-  const fallback = config.test_mode && config.payment_methods.some((method) =>
+  // All countries may choose the safe test-only card simulator as an alternative.
+  const cardEnabled = config.test_mode && config.payment_methods.some((method) =>
     method.code === 'CARD_SIM' && method.channel === 'card')
-  return fallback ? [{
+  const card: PaymentMethodOption = {
     code: 'CARD_SIM',
-    label: 'Carte bancaire',
+    label: 'Autres moyens de paiement — Carte bancaire',
     hint: 'Visa · Mastercard · American Express — simulation',
     logo: '/payment-logos/visa.svg',
-  }] : []
+  }
+  return cardEnabled ? [...mobile, card] : mobile
 }
 
 export function methodName(code: string | null): string {
