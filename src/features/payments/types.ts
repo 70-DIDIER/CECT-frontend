@@ -1,4 +1,5 @@
 import { usePublicConfig } from '@/features/config/usePublicConfig'
+import AFRICAN_NETWORK_NAMES from '@/data/africanMobileMoneyNames.json'
 
 export type PaymentStatus = 'created' | 'pending' | 'approved' | 'declined' | 'canceled' | 'expired' | 'failed' | 'mismatch'
 
@@ -52,14 +53,14 @@ export function usePaymentMethods(country: string = 'TG'): ReadonlyArray<Payment
       && (method.countries.length === 0 || method.countries.includes(country)))
     .map((method) => ({
       code: method.code,
-      label: NETWORK_BRANDS[method.code]?.label ?? method.label.replace(/\s*\(simulation\)/gi, ''),
+      label: NETWORK_BRANDS[method.code]?.label ?? (AFRICAN_NETWORK_NAMES as Record<string, string>)[method.code] ?? method.label.replace(/\s*\(simulation(?: uniquement)?\)/gi, ''),
       hint: config.test_mode ? 'Paiement mobile simulé' : 'Paiement mobile',
       logo: NETWORK_BRANDS[method.code]?.logo ?? null,
     }))
 }
 
 export function methodName(code: string | null): string {
-  return PAYMENT_METHODS.find((method) => method.code === code)?.label ?? code ?? '—'
+  return PAYMENT_METHODS.find((method) => method.code === code)?.label ?? (code ? (AFRICAN_NETWORK_NAMES as Record<string, string>)[code] ?? (code === 'AFRICA_WALLET_TEST' ? 'Autre portefeuille mobile' : code) : '—')
 }
 
 export function isInFlight(status: PaymentStatus): boolean {
