@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Smartphone, Banknote, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { CountrySelect } from '@/components/ui/CountrySelect'
 import { DEFAULT_COUNTRY, findCountry, toInternationalPhone } from '@/lib/countries'
@@ -14,7 +14,6 @@ import { homeFor, useAuth } from '@/app/AuthContext'
 import { ApiError, newIdempotencyKey, post } from '@/lib/api'
 import { CodeForm } from '@/features/auth/CodeForm'
 import { usePublicConfig } from '@/features/config/usePublicConfig'
-import { usePaymentMethods } from '@/features/payments/types'
 import { authErrorMessage, fieldErrors } from '@/features/auth/errors'
 
 const API_FIELDS: Record<string, keyof FormData> = {
@@ -46,7 +45,6 @@ const schema = z.object({
   email: z.string().email({ message: 'invalid_email' }),
   password: z.string().min(8),
   confirmPassword: z.string().min(8),
-  paymentMethod: z.string().min(1),
   commitment: z.literal(true, { errorMap: () => ({ message: 'required' }) }),
   location: z.string().min(1),
   date: z.string().min(1),
@@ -65,19 +63,17 @@ type FormData = z.infer<typeof schema>
 
 const STEP_FIELDS: (keyof FormData)[][] = [
   ['personType', 'firstName', 'lastName', 'pernum', 'country', 'phone', 'email', 'password', 'confirmPassword'],
-  ['paymentMethod'],
   ['commitment'],
   ['location', 'date'],
 ]
 
-const STEPS = ['step1', 'step2', 'step3', 'step4'] as const
+const STEPS = ['step1', 'step3', 'step4'] as const
 
 export default function RegisterPage() {
   const { t } = useTranslation()
   const [step, setStep] = useState(0)
   const navigate = useNavigate()
   const legalForms = usePublicConfig().data?.legal_forms ?? ['SARL', 'SA', 'SAS', 'SASU', 'EURL', 'GIE', 'Association', 'Coopérative', 'Auto-entrepreneur', 'Autre']
-  const paymentMethods = usePaymentMethods()
   const { user, verifyEmail, resendOtp } = useAuth()
   const [verification, setVerification] = useState<{ challengeId: string; sentTo: string } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -87,7 +83,7 @@ export default function RegisterPage() {
 
   const { register, handleSubmit, watch, control, setError, getValues, formState: { errors, isSubmitting }, trigger } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { personType: 'physical', paymentMethod: 'TMONEY', country: DEFAULT_COUNTRY, location: 'Lomé', date: new Date().toISOString().slice(0, 10) },
+    defaultValues: { personType: 'physical', country: DEFAULT_COUNTRY, location: 'Lomé', date: new Date().toISOString().slice(0, 10) },
   })
 
   const personType = watch('personType')
@@ -138,7 +134,6 @@ export default function RegisterPage() {
           password: data.password,
           password_confirmation: data.confirmPassword,
           city: data.location.trim(),
-          preferred_payment_method: data.paymentMethod,
           commitment_accepted: true,
           signed_place: data.location.trim(),
           signed_on: `${data.date}T00:00:00Z`,
@@ -367,31 +362,8 @@ export default function RegisterPage() {
                 </>
               )}
 
-              {/* ─── Step 2: Payment ─── */}
+              {/* ─── Step 2: Commitment ─── */}
               {step === 1 && (
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text)] mb-3">{t('auth.register.paymentMethod')}</label>
-                  <div className="space-y-3">
-                    {paymentMethods.map(({ code, label }) => (
-                      <label
-                        key={code}
-                        className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${
-                          watch('paymentMethod') === code
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                            : 'border-[var(--color-border)]'
-                        }`}
-                      >
-                        <input {...register('paymentMethod')} type="radio" value={code} className="sr-only" />
-                        {code === 'CASH' || code === 'BANK_TRANSFER' ? <Banknote size={18} className="text-[var(--color-primary)]" aria-hidden /> : <Smartphone size={18} className="text-[var(--color-primary)]" aria-hidden />}
-                        <span className="text-sm font-medium">{label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ─── Step 3: Commitment ─── */}
-              {step === 2 && (
                 <div>
                   <p className="text-sm text-[var(--color-text-muted)] mb-4 leading-relaxed">
                     {t('auth.register.commitment')}
@@ -408,8 +380,8 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              {/* ─── Step 4: Location + date ─── */}
-              {step === 3 && (
+              {/* ─── Step 3: Location + date ─── */}
+              {step === 2 && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t('auth.register.location')} *</label>

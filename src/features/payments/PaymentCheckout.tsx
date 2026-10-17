@@ -5,17 +5,27 @@ import { formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { PAYMENT_FAILURE_LABELS, isInFlight, methodName, usePaymentMethods, type PaymentAttempt } from './types'
 import { SimulatedMobilePayment } from './SimulatedMobilePayment'
+import { useAuth } from '@/app/AuthContext'
+import { fromInternationalPhone } from '@/lib/countries'
 
 interface MethodPickerProps {
   value: string
   onChange: (code: string) => void
+  country?: string
 }
 
-export function MethodPicker({ value, onChange }: MethodPickerProps) {
-  const methods = usePaymentMethods()
+export function MethodPicker({ value, onChange, country }: MethodPickerProps) {
+  const { user } = useAuth()
+  const methods = usePaymentMethods(country ?? fromInternationalPhone(user?.phone)?.country ?? 'TG')
   return (
     <fieldset className="space-y-2">
       <legend className="mb-2 text-sm font-semibold text-[var(--color-text)]">Moyen de paiement</legend>
+      {methods.length === 0 && (
+        <p role="status" className="rounded-xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-text-muted)]">
+          Aucun opérateur de paiement simulé n’est encore activé par la CECT pour ce pays.
+          Choisissez un autre pays ou contactez la coopérative.
+        </p>
+      )}
       {methods.map((method) => (
         <label
           key={method.code}
@@ -24,6 +34,9 @@ export function MethodPicker({ value, onChange }: MethodPickerProps) {
           }`}
         >
           <input type="radio" name="payment-method" value={method.code} checked={value === method.code} onChange={() => onChange(method.code)} className="accent-[var(--color-primary)]" />
+          <span className="flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm">
+            {method.logo ? <img src={method.logo} alt={`Logo ${method.label}`} className="h-full w-full object-contain" /> : <Smartphone size={20} className="text-emerald-700" />}
+          </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-[var(--color-text)]">{method.label}</span>
             <span className="block text-xs text-[var(--color-text-muted)]">{method.hint}</span>
@@ -65,9 +78,11 @@ interface PaymentCheckoutProps {
   onRefresh: () => Promise<void>
   onSimulate: () => Promise<void>
   onChangeMethod: () => void
+  paymentPhone?: string | null
 }
 
-export function PaymentCheckout({ payment, onDeclare, onRefresh, onSimulate, onChangeMethod }: PaymentCheckoutProps) {
+export function PaymentCheckout({ payment, onDeclare, onRefresh, onSimulate, onChangeMethod, paymentPhone }: PaymentCheckoutProps) {
+  const { user } = useAuth()
   const [reference, setReference] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,6 +123,7 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onSimulate, onC
             amount={payment.amount}
             onConfirmed={onSimulate}
             onChangeMethod={onChangeMethod}
+            paymentPhone={paymentPhone ?? user?.phone}
           />
         </div>
       )}

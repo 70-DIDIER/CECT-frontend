@@ -3,12 +3,13 @@ import { get } from '@/lib/api'
 
 export interface PublicConfig {
   currency: string
+  test_mode: boolean
   membership_fees: { natural_person: number; legal_person: number }
   rates_xof_per_yem: { purchase: number; sale: number; transfer: number }
   legal_forms: string[]
   rccm_required: boolean
   nif_required: boolean
-  payment_methods: { code: string; label: string; channel: 'mobile_money' | 'manual' }[]
+  payment_methods: { code: string; label: string; channel: 'mobile_money' | 'manual'; countries: string[] }[]
 }
 
 export function usePublicConfig() {

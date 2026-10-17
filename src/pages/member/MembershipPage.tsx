@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Pencil, ShieldCheck, Smartphone } from 'lucide-react'
 import { Panel } from '@/components/dashboard/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useAuth } from '@/app/AuthContext'
@@ -10,7 +10,10 @@ import { get, newIdempotencyKey, post } from '@/lib/api'
 import { formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { AmountBreakdown, MethodPicker, PaymentCheckout } from '@/features/payments/PaymentCheckout'
-import { isInFlight, type PaymentAttempt } from '@/features/payments/types'
+import { isInFlight, usePaymentMethods, type PaymentAttempt } from '@/features/payments/types'
+import { CountrySelect } from '@/components/ui/CountrySelect'
+import { DEFAULT_COUNTRY, findCountry, fromInternationalPhone, toInternationalPhone } from '@/lib/countries'
+import type { CountryCode } from 'libphonenumber-js/min'
 
 interface MembershipState {
   status: string
@@ -25,9 +28,25 @@ export default function MembershipPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user, refresh } = useAuth()
+  const originalPhone = fromInternationalPhone(user?.phone)
+  const [countryCode, setCountryCode] = useState<string>(originalPhone?.country ?? DEFAULT_COUNTRY)
+  const [nationalPhone, setNationalPhone] = useState<string>(originalPhone?.national ?? '')
+  const [editingPhone, setEditingPhone] = useState(!originalPhone)
   const [method, setMethod] = useState('TMONEY')
   const [choosing, setChoosing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const availableMethods = usePaymentMethods(countryCode)
+  const selectedMethod = availableMethods.some((item) => item.code === method) ? method : (availableMethods[0]?.code ?? '')
+  const phoneE164 = toInternationalPhone(countryCode as CountryCode, nationalPhone)
+  const country = findCountry(countryCode)
+
+  useEffect(() => {
+    const initial = fromInternationalPhone(user?.phone)
+    if (!initial) return
+    setCountryCode(initial.country)
+    setNationalPhone(initial.national)
+    setEditingPhone(false)
+  }, [user?.phone])
 
   const query = useQuery({
     queryKey: QUERY_KEY,
@@ -52,7 +71,10 @@ export default function MembershipPage() {
   }, [active, navigate, queryClient, refresh])
 
   const startPayment = useMutation({
-    mutationFn: () => post<PaymentAttempt>('/me/membership/payments', { method }, newIdempotencyKey()),
+    mutationFn: () => {
+      if (!phoneE164 || !selectedMethod) return Promise.reject(new Error('Numéro ou moyen de paiement invalide.'))
+      return post<PaymentAttempt>('/me/membership/payments', { method: selectedMethod, payment_phone: phoneE164 }, newIdempotencyKey())
+    },
     onSuccess: () => {
       setChoosing(false)
       setError(null)
@@ -108,6 +130,7 @@ export default function MembershipPage() {
                   await query.refetch()
                 }}
                 onChangeMethod={() => setChoosing(true)}
+                paymentPhone={phoneE164}
               />
             ) : (
               <form
@@ -118,7 +141,47 @@ export default function MembershipPage() {
                 className="space-y-4"
               >
                 {state.payment_quote && <AmountBreakdown net={state.payment_quote.net_amount} fee={state.payment_quote.fee_amount} total={state.payment_quote.total_amount} />}
-                <MethodPicker value={method} onChange={setMethod} />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="membership-payment-phone" className="text-sm font-semibold text-[var(--color-text)]">
+                      Numéro qui servira au paiement
+                    </label>
+                    {!editingPhone && (
+                      <button type="button" onClick={() => setEditingPhone(true)}
+                        aria-label="Modifier le numéro de paiement"
+                        className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10">
+                        <Pencil size={14} aria-hidden /> Modifier
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex">
+                    <CountrySelect value={countryCode} onChange={(next) => {
+                      setCountryCode(next)
+                      setNationalPhone('')
+                      setEditingPhone(true)
+                      setError(null)
+                    }} className="w-[8.5rem] shrink-0" />
+                    <input id="membership-payment-phone" type="tel" inputMode="tel" autoComplete="tel-national"
+                      value={nationalPhone} readOnly={!editingPhone}
+                      onChange={(event) => { setNationalPhone(event.target.value); setError(null) }}
+                      placeholder={countryCode === 'TG' ? '90 12 34 56' : 'Numéro national'}
+                      className={'min-w-0 flex-1 rounded-r-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]' + (!editingPhone ? ' opacity-90' : '')} />
+                  </div>
+                  {!phoneE164 ? (
+                    <p role="alert" className="text-xs text-[var(--color-danger)]">
+                      Saisissez un numéro valide pour {country?.name ?? 'le pays choisi'}.
+                    </p>
+                  ) : (
+                    <p className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                      <Smartphone size={13} aria-hidden /> {phoneE164} · {editingPhone ? 'Numéro modifiable pour ce paiement' : 'Prérempli depuis votre inscription'}
+                    </p>
+                  )}
+                </div>
+                <MethodPicker value={selectedMethod} onChange={setMethod} country={countryCode} />
+                <p className="flex items-center gap-2 rounded-xl bg-[var(--color-primary)]/5 p-3 text-xs text-[var(--color-text-muted)]">
+                  <ShieldCheck size={16} className="shrink-0 text-[var(--color-primary)]" aria-hidden />
+                  Environnement de démonstration : aucun paiement réel, SMS ni débit mobile.
+                </p>
                 {error && (
                   <p role="alert" className="text-sm text-[var(--color-danger)]">
                     {error}
@@ -126,7 +189,7 @@ export default function MembershipPage() {
                 )}
                 <button
                   type="submit"
-                  disabled={startPayment.isPending}
+                  disabled={startPayment.isPending || !phoneE164 || !selectedMethod}
                   className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
                 >
                   Continuer

@@ -17,14 +17,12 @@ interface SimulatedMobilePaymentProps {
   amount: number
   onConfirmed: () => Promise<void>
   onChangeMethod: () => void
+  paymentPhone?: string | null
 }
 
-export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMethod }: SimulatedMobilePaymentProps) {
-  const [phone, setPhone] = useState('')
+export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMethod, paymentPhone }: SimulatedMobilePaymentProps) {
   const [step, setStep] = useState<Step>('phone')
   const [error, setError] = useState<string | null>(null)
-
-  const phoneValid = /^\d{8}$/.test(phone)
 
   async function pay() {
     setError(null)
@@ -45,7 +43,7 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
         <Loader2 size={32} className="animate-spin text-[var(--color-primary)]" aria-hidden />
         <p className="text-sm font-semibold text-[var(--color-text)]">Confirmation du paiement de démonstration</p>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Simulation interne de {formatXof(amount)} pour {methodName(method)} (+228 {phone}). Aucun SMS ou débit réel.
+          Simulation interne de {formatXof(amount)} pour {methodName(method)} {paymentPhone ? `(${paymentPhone})` : ''}. Aucun SMS ou débit réel.
         </p>
       </div>
     )
@@ -64,32 +62,23 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
     <form
       onSubmit={(event) => {
         event.preventDefault()
-        if (phoneValid) void pay()
+        void pay()
       }}
       className="space-y-4"
     >
       <p className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
         <Smartphone size={16} className="mt-0.5 shrink-0" aria-hidden />
-        Saisissez un numéro de test pour simuler un paiement {methodName(method)}. Aucun transfert d’argent n’aura lieu.
+Ce paiement {methodName(method)} est une simulation interne : aucun transfert d’argent n’aura lieu.
       </p>
-      <div>
-        <label htmlFor="simulated-phone" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
-          Numéro de téléphone
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm text-[var(--color-text-muted)]">+228</span>
-          <input
-            id="simulated-phone"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 8))}
-            inputMode="numeric"
-            placeholder="90123456"
-            autoComplete="tel-national"
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-          />
+      {paymentPhone && (
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--dash-bg)] px-4 py-3 text-sm">
+          <span className="text-[var(--color-text-muted)]">Numéro de paiement : </span>
+          <strong className="text-[var(--color-text)]">{paymentPhone}</strong>
+          <button type="button" onClick={onChangeMethod} className="ml-2 font-semibold text-[var(--color-primary)] underline-offset-2 hover:underline">
+            Modifier
+          </button>
         </div>
-        {phone.length > 0 && !phoneValid && <p className="mt-1 text-xs text-[var(--color-danger)]">Le numéro doit contenir 8 chiffres.</p>}
-      </div>
+      )}
       {error && (
         <p role="alert" className="text-sm text-[var(--color-danger)]">
           {error}
@@ -97,7 +86,7 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
       )}
       <button
         type="submit"
-        disabled={!phoneValid}
+
         className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
       >
         Payer {formatXof(amount)}
