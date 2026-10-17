@@ -19,18 +19,27 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 export default function ContactPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [submitted, setSubmitted] = useState(false)
   const [_error, _setError] = useState(false)
 
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
 
-  const onSubmit = async (_data: FormData) => {
-    await new Promise((r) => setTimeout(r, 800))
+  // CECT has no verified contact-submission API yet. Prepare a real email
+  // instead of displaying a misleading "message sent" confirmation.
+  const onSubmit = (data: FormData) => {
+    const subject = encodeURIComponent('[CECT] ' + data.subject)
+    const body = encodeURIComponent([
+      'Nom : ' + data.name,
+      'E-mail : ' + data.email,
+      'Téléphone : ' + (data.phone || 'Non renseigné'),
+      '',
+      data.message,
+    ].join('\n'))
+    window.location.href = 'mailto:cect@proton.me?subject=' + subject + '&body=' + body
     setSubmitted(true)
-    reset()
   }
 
   const whatsappNumber = (import.meta.env['VITE_WHATSAPP_NUMBER'] as string | undefined) ?? '22890144204'
@@ -50,7 +59,7 @@ export default function ContactPage() {
           <div>
             {submitted ? (
               <div className="p-6 rounded-2xl border border-[var(--color-success)]/30 bg-[var(--color-success)]/5 text-[var(--color-success)] text-center">
-                {t('contact.form.success')}
+                {i18n.language.startsWith('en') ? 'Your email application should open with the message prepared. Press Send in that application to transmit it.' : 'Votre messagerie devrait s’ouvrir avec le message préparé. Cliquez sur Envoyer dans votre messagerie pour le transmettre.'}
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -96,7 +105,7 @@ export default function ContactPage() {
                 {_error && <p className="text-xs text-[var(--color-danger)]">{t('contact.form.error')}</p>}
                 <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                   <Send size={18} aria-hidden />
-                  {isSubmitting ? t('contact.form.sending') : t('contact.form.send')}
+                  {isSubmitting ? t('contact.form.sending') : (i18n.language.startsWith('en') ? 'Open email application' : 'Ouvrir ma messagerie')}
                 </Button>
               </form>
             )}

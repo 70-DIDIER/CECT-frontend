@@ -1,0 +1,28 @@
+name: Frontend CECT — build validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, integration/staging-cect-20261017]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: TypeScript and Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Build the CECT public and member application
+        run: npm run build
+        env:
+          VITE_API_URL: https://api.13-49-203-235.sslip.io
+          VITE_SIMULATE_PAYMENT: "false"
