@@ -58,6 +58,34 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 RELEASE="$RELEASES/frontend-didier-$STAMP"
 mkdir -p "$RELEASE"
 rsync -a dist/ "$RELEASE/"
+
+# Keep historical fingerprinted JS/CSS chunks available after deployment.
+# An open SPA tab can lazy-load chunks for its original build minutes or hours
+# later. Without this carry-over, Nginx returns 404 for those hashed files and
+# the member sees a broken or blank screen until a force refresh.
+# Only archived releases that were actually produced from 70-DIDIER are read;
+# no HTML, API config, source maps, users or financial data is copied.
+shopt -s nullglob
+for previous_release in "$RELEASES"/frontend-didier-*/ "$RELEASES"/frontend-5f4f2b6*/; do
+  [[ "$previous_release" == "$RELEASE/" ]] && continue
+  [[ -d "$previous_release/assets" ]] || continue
+  rsync -a --ignore-existing \
+    --include='*/' --include='*.js' --include='*.css' --exclude='*' \
+    "$previous_release/assets/" "$RELEASE/assets/"
+done
+shopt -u nullglob
+
+# A fixed manifest lets us test that the latest and retained chunks are
+# still present before publishing. Without the full request graph, checking
+# only index.html is not sufficient.
+for previous_asset in "$OLD"/assets/*.js "$OLD"/assets/*.css; do
+  [[ -f "$previous_asset" ]] || continue
+  test -s "$RELEASE/assets/$(basename "$previous_asset")" || {
+    echo "Retained asset missing: $previous_asset" >&2
+    exit 1
+  }
+done
+
 find "$RELEASE" -type d -exec chmod 755 {} +
 find "$RELEASE" -type f -exec chmod 644 {} +
 grep -q '/logos/CECT_logo_64.png' "$RELEASE/index.html"
@@ -86,6 +114,22 @@ curl --fail --silent --show-error --max-time 12 -o /dev/null "$PUBLIC_ORIGIN/log
 for asset in $(grep -oE '/assets/[^"]+\.(js|css)' "$RELEASE/index.html" | sort -u); do
   curl --fail --silent --show-error --max-time 12 -o /dev/null "$PUBLIC_ORIGIN$asset"
 done
+# Smoke-test at least the previous HTML's entrypoints: cached HTML and
+# existing browser tabs must not fail after switching the frontend release.
+for asset in $(grep -oE '/assets/[^"]+\.(js|css)' "$OLD/index.html" | sort -u); do
+  test -s "$RELEASE${asset}"
+  case "$asset" in
+    *.js) expected_type='application/javascript' ;;
+    *.css) expected_type='text/css' ;;
+    *) continue ;;
+  esac
+  received_type="$(curl --fail --silent --show-error --max-time 12 -o /dev/null -w '%{content_type}' "$PUBLIC_ORIGIN$asset")"
+  [[ "$received_type" == "$expected_type" ]] || {
+    echo "Old bundle is unavailable or has the wrong MIME: $asset ($received_type)" >&2
+    false
+  }
+done
+
 curl --fail --silent --show-error --max-time 12 "$API_ORIGIN/api/v1/health" >/dev/null
 ROLLBACK_DONE=1
 trap - ERR
