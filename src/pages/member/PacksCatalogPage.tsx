@@ -14,8 +14,7 @@ import { get, newIdempotencyKey, post } from '@/lib/api'
 import { formatBps, formatDateMedium, formatXof, formatYem } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { AmountBreakdown, MethodPicker, PaymentCheckout } from '@/features/payments/PaymentCheckout'
-import { PAYMENT_SIMULATION_ENABLED, SimulatedMobilePayment } from '@/features/payments/SimulatedMobilePayment'
-import { isInFlight, type PaymentAttempt } from '@/features/payments/types'
+import { type PaymentAttempt } from '@/features/payments/types'
 import { FAMILIES, packFacts, type PackPlan, type SubscribeResult, type UserPack } from '@/features/packs/types'
 
 type Step = { name: 'method' } | { name: 'checkout'; result: SubscribeResult } | { name: 'done'; pack: UserPack }
@@ -100,19 +99,7 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
             </div>
           )}
 
-          {step.name === 'checkout' && step.result.payment && PAYMENT_SIMULATION_ENABLED && step.result.payment.mode === 'psp' && isInFlight(step.result.payment.status) && (
-            <SimulatedMobilePayment
-              method={step.result.payment.method ?? method}
-              amount={step.result.payment.amount}
-              onConfirmed={async () => {
-                await post(`/me/payments/${step.result.payment?.id}/demo-settle`)
-                await status.refetch()
-              }}
-              onChangeMethod={() => setStep({ name: 'method' })}
-            />
-          )}
-
-          {step.name === 'checkout' && step.result.payment && !(PAYMENT_SIMULATION_ENABLED && step.result.payment.mode === 'psp' && isInFlight(step.result.payment.status)) && (
+          {step.name === 'checkout' && step.result.payment && (
             <PaymentCheckout
               payment={step.result.payment}
               onRefresh={async () => {
@@ -121,6 +108,10 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
               onDeclare={async (reference) => {
                 await post(`/me/payments/${step.result.payment?.id}/declare`, { reference: reference || null })
                 patchPayment({ declared_at: new Date().toISOString() })
+              }}
+              onSimulate={async () => {
+                await post(`/me/payments/${step.name === 'checkout' ? step.result.payment?.id : ''}/simulate`)
+                await status.refetch()
               }}
               onChangeMethod={() => setStep({ name: 'method' })}
             />
@@ -216,18 +207,7 @@ function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: numb
               <p className="text-sm text-[var(--color-text-muted)]">
                 {formatYem(state.topup.quantity)} seront crédités une fois le paiement confirmé (remise de {formatBps(state.topup.discount_bps)} incluse).
               </p>
-              {PAYMENT_SIMULATION_ENABLED && state.payment.mode === 'psp' && isInFlight(state.payment.status) ? (
-                <SimulatedMobilePayment
-                  method={state.payment.method ?? method}
-                  amount={state.payment.amount}
-                  onConfirmed={async () => {
-                    await post(`/me/payments/${state.payment.id}/demo-settle`)
-                    await topups.refetch()
-                  }}
-                  onChangeMethod={() => setState(null)}
-                />
-              ) : (
-                <PaymentCheckout
+              <PaymentCheckout
                   payment={state.payment}
                   onRefresh={async () => {
                     await topups.refetch()
@@ -236,9 +216,12 @@ function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: numb
                     await post(`/me/payments/${state.payment.id}/declare`, { reference: reference || null })
                     setState({ ...state, payment: { ...state.payment, declared_at: new Date().toISOString() } })
                   }}
+                  onSimulate={async () => {
+                    await post(`/me/payments/${state.payment.id}/simulate`)
+                    await topups.refetch()
+                  }}
                   onChangeMethod={() => setState(null)}
                 />
-              )}
             </div>
           ) : (
             <form onSubmit={(event) => void submit(event)} className="space-y-4">

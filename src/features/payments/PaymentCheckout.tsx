@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api'
 import { formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { PAYMENT_FAILURE_LABELS, isInFlight, methodName, usePaymentMethods, type PaymentAttempt } from './types'
+import { SimulatedMobilePayment } from './SimulatedMobilePayment'
 
 interface MethodPickerProps {
   value: string
@@ -62,10 +63,11 @@ interface PaymentCheckoutProps {
   payment: PaymentAttempt
   onDeclare: (reference: string) => Promise<void>
   onRefresh: () => Promise<void>
+  onSimulate: () => Promise<void>
   onChangeMethod: () => void
 }
 
-export function PaymentCheckout({ payment, onDeclare, onRefresh, onChangeMethod }: PaymentCheckoutProps) {
+export function PaymentCheckout({ payment, onDeclare, onRefresh, onSimulate, onChangeMethod }: PaymentCheckoutProps) {
   const [reference, setReference] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,6 +86,7 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onChangeMethod 
 
   const failure = PAYMENT_FAILURE_LABELS[payment.status]
   const declared = payment.declared_at !== null
+  const simulated = payment.provider === 'fake' && payment.simulation_available && isInFlight(payment.status)
 
   return (
     <div className="space-y-4">
@@ -95,13 +98,27 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onChangeMethod 
         </p>
       )}
 
-      {isInFlight(payment.status) && payment.mode === 'psp' && (
+      {simulated && (
+        <div className="space-y-3">
+          <p className="rounded-xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 p-3 text-sm font-semibold text-[var(--color-text)]">
+            MODE TEST — Paiement simulé. Aucun débit réel et aucun SMS ne sera envoyé.
+          </p>
+          <SimulatedMobilePayment
+            method={payment.method ?? 'TMONEY'}
+            amount={payment.amount}
+            onConfirmed={onSimulate}
+            onChangeMethod={onChangeMethod}
+          />
+        </div>
+      )}
+
+      {isInFlight(payment.status) && payment.mode === 'psp' && !simulated && (
         <div className="space-y-3">
           <p className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
             <Smartphone size={16} className="mt-0.5 shrink-0" aria-hidden />
-            Vous allez être redirigé vers la page sécurisée de {methodName(payment.method)}. Revenez ensuite sur cette page : l’activation est automatique.
+            {payment.provider === 'fake' ? 'La simulation n’est pas disponible sur cette session. Revenez dans votre espace CECT.' : <>Vous allez être redirigé vers la page sécurisée de {methodName(payment.method)}. Revenez ensuite sur cette page : l’activation est automatique.</>}
           </p>
-          {payment.checkout_url && (
+          {payment.provider !== 'fake' && payment.checkout_url && (
             <a
               href={payment.checkout_url}
               className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
@@ -171,7 +188,7 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onChangeMethod 
         </p>
       )}
 
-      {!(isInFlight(payment.status) && payment.mode === 'manual' && declared) && (
+      {!simulated && !(isInFlight(payment.status) && payment.mode === 'manual' && declared) && (
         <button type="button" onClick={onChangeMethod} className="text-sm text-[var(--color-text-muted)] underline-offset-2 hover:underline">
           {failure ? 'Choisir un autre moyen de paiement' : 'Changer de moyen de paiement'}
         </button>

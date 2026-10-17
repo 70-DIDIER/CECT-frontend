@@ -5,11 +5,9 @@ import { authErrorMessage } from '@/features/auth/errors'
 import { methodName } from './types'
 
 /**
- * Active tant que la passerelle réelle n'est pas configurée (VITE_SIMULATE_PAYMENT=true).
- * Le parcours ressemble à un paiement mobile normal, mais aucune passerelle n'est appelée.
+ * Affiché uniquement lorsque l'API confirme qu'un paiement est simulable en staging.
+ * La confirmation passe par l'API protégée du paiement courant, sans argent réel.
  */
-export const PAYMENT_SIMULATION_ENABLED = import.meta.env.VITE_SIMULATE_PAYMENT === 'true'
-
 const PROCESSING_DELAY_MS = 3000
 
 type Step = 'phone' | 'processing' | 'done'
@@ -45,9 +43,9 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
     return (
       <div role="status" className="flex flex-col items-center gap-3 py-6 text-center">
         <Loader2 size={32} className="animate-spin text-[var(--color-primary)]" aria-hidden />
-        <p className="text-sm font-semibold text-[var(--color-text)]">Confirmez le paiement sur votre téléphone</p>
+        <p className="text-sm font-semibold text-[var(--color-text)]">Confirmation du paiement de démonstration</p>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Une demande de {formatXof(amount)} a été envoyée au +228 {phone} ({methodName(method)}).
+          Simulation interne de {formatXof(amount)} pour {methodName(method)} (+228 {phone}). Aucun SMS ou débit réel.
         </p>
       </div>
     )
@@ -72,7 +70,7 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
     >
       <p className="flex items-start gap-2 text-sm text-[var(--color-text-muted)]">
         <Smartphone size={16} className="mt-0.5 shrink-0" aria-hidden />
-        Saisissez le numéro {methodName(method)} qui effectuera le paiement.
+        Saisissez un numéro de test pour simuler un paiement {methodName(method)}. Aucun transfert d’argent n’aura lieu.
       </p>
       <div>
         <label htmlFor="simulated-phone" className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">

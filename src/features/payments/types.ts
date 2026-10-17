@@ -5,6 +5,8 @@ export type PaymentStatus = 'created' | 'pending' | 'approved' | 'declined' | 'c
 export interface PaymentAttempt {
   id: string
   reference: string
+  provider: string
+  simulation_available: boolean
   method: string | null
   mode: 'psp' | 'manual'
   status: PaymentStatus

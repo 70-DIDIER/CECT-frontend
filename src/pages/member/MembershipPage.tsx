@@ -10,7 +10,6 @@ import { get, newIdempotencyKey, post } from '@/lib/api'
 import { formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { AmountBreakdown, MethodPicker, PaymentCheckout } from '@/features/payments/PaymentCheckout'
-import { PAYMENT_SIMULATION_ENABLED, SimulatedMobilePayment } from '@/features/payments/SimulatedMobilePayment'
 import { isInFlight, type PaymentAttempt } from '@/features/payments/types'
 
 interface MembershipState {
@@ -28,7 +27,6 @@ export default function MembershipPage() {
   const { user, refresh } = useAuth()
   const [method, setMethod] = useState('TMONEY')
   const [choosing, setChoosing] = useState(false)
-  const [methodChosen, setMethodChosen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const query = useQuery({
@@ -94,36 +92,7 @@ export default function MembershipPage() {
 
         {state && !active && (
           <Panel title="Frais d’adhésion" subtitle={`Montant : ${formatXof(state.fee_due)}`}>
-            {PAYMENT_SIMULATION_ENABLED ? (
-              methodChosen ? (
-                <SimulatedMobilePayment
-                  method={method}
-                  amount={state.payment_quote?.total_amount ?? state.fee_due}
-                  onConfirmed={async () => {
-                    await post('/me/membership/demo-activation')
-                    await query.refetch()
-                  }}
-                  onChangeMethod={() => setMethodChosen(false)}
-                />
-              ) : (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    setMethodChosen(true)
-                  }}
-                  className="space-y-4"
-                >
-                  {state.payment_quote && <AmountBreakdown net={state.payment_quote.net_amount} fee={state.payment_quote.fee_amount} total={state.payment_quote.total_amount} />}
-                  <MethodPicker value={method} onChange={setMethod} />
-                  <button
-                    type="submit"
-                    className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)]"
-                  >
-                    Continuer
-                  </button>
-                </form>
-              )
-            ) : showCheckout ? (
+            {showCheckout ? (
               <PaymentCheckout
                 payment={attempt}
                 onRefresh={async () => {
@@ -132,6 +101,10 @@ export default function MembershipPage() {
                 }}
                 onDeclare={async (reference) => {
                   await post(`/me/payments/${attempt.id}/declare`, { reference: reference || null })
+                  await query.refetch()
+                }}
+                onSimulate={async () => {
+                  await post(`/me/payments/${attempt.id}/simulate`)
                   await query.refetch()
                 }}
                 onChangeMethod={() => setChoosing(true)}
