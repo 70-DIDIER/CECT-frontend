@@ -35,7 +35,10 @@ export function MethodPicker({ value, onChange, country }: MethodPickerProps) {
         >
           <input type="radio" name="payment-method" value={method.code} checked={value === method.code} onChange={() => onChange(method.code)} className="accent-[var(--color-primary)]" />
           <span className="flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm">
-            {method.logo ? <img src={method.logo} alt={`Logo ${method.label}`} className="h-full w-full object-contain" /> : <Smartphone size={20} className="text-emerald-700" />}
+            {method.logo ? <img src={method.logo} alt={`Logo ${method.label}`} className="h-full w-full object-contain" /> : <span aria-label="Pictogramme neutre, logo officiel non fourni" className="flex flex-col items-center justify-center gap-0.5 text-emerald-800">
+              <Smartphone size={16} aria-hidden />
+              <span className="text-[9px] font-black uppercase">{method.label.slice(0, 3)}</span>
+            </span>}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-[var(--color-text)]">{method.label}</span>
