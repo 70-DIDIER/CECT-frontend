@@ -9,6 +9,10 @@ if [[ "${CECT_STAGING_DEPLOY:-}" != "YES" ]]; then
 fi
 
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ "$(git -C "$SOURCE_DIR" remote get-url origin)" != "https://github.com/70-DIDIER/CECT-frontend.git" ]]; then
+  echo "Refusing to deploy frontend outside the 70-DIDIER/CECT-frontend source repository." >&2
+  exit 2
+fi
 API_ORIGIN="${VITE_API_URL:-https://api.13-49-203-235.sslip.io}"
 PUBLIC_ORIGIN="${CECT_PUBLIC_ORIGIN:-https://13-49-203-235.sslip.io}"
 LARAVEL_ENV="${CECT_LARAVEL_ENV_FILE:-/var/www/cect-api/.env}"
@@ -29,6 +33,10 @@ if [[ ! -L "$LINK" ]]; then
   exit 2
 fi
 OLD="$(readlink -f "$LINK")"
+if [[ "$(basename "$OLD")" != frontend-didier-* && "$(basename "$OLD")" != frontend-5f4f2b6* ]]; then
+  echo "Refusing legacy or non-Didier frontend rollback source: $OLD" >&2
+  exit 2
+fi
 if [[ ! -s "$OLD/index.html" ]]; then
   echo "Old release missing, refusing deployment." >&2
   exit 2
