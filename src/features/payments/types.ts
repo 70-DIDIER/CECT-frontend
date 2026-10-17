@@ -36,6 +36,7 @@ const NETWORK_BRANDS: Record<string, { label: string; logo: string }> = {
   FLOOZ: { label: 'Flooz', logo: '/payment-logos/flooz.png' },
   WAVE: { label: 'Wave', logo: '/payment-logos/wave.png' },
   ORANGE_MONEY: { label: 'Orange Money', logo: '/payment-logos/orange-money.svg' },
+  MPESA: { label: 'M-Pesa', logo: '/payment-logos/mpesa.svg' },
 }
 
 export const PAYMENT_METHODS: ReadonlyArray<PaymentMethodOption> = [
@@ -48,19 +49,32 @@ export const PAYMENT_METHODS: ReadonlyArray<PaymentMethodOption> = [
 export function usePaymentMethods(country: string = 'TG'): ReadonlyArray<PaymentMethodOption> {
   const config = usePublicConfig().data
   if (!config) return country === 'TG' ? PAYMENT_METHODS.slice(0, 2) : []
-  return config.payment_methods
+  const mobile = config.payment_methods
     .filter((method) => method.channel === 'mobile_money'
-      && (method.countries.length === 0 || method.countries.includes(country)))
+      && method.countries.includes(country)
+      && method.code !== 'AFRICA_WALLET_TEST')
     .map((method) => ({
       code: method.code,
       label: NETWORK_BRANDS[method.code]?.label ?? (AFRICAN_NETWORK_NAMES as Record<string, string>)[method.code] ?? method.label.replace(/\s*\(simulation(?: uniquement)?\)/gi, ''),
-      hint: config.test_mode ? 'Paiement mobile simulé' : 'Paiement mobile',
+      hint: 'Paiement Mobile Money simulé',
       logo: NETWORK_BRANDS[method.code]?.logo ?? null,
     }))
+  if (mobile.length > 0) return mobile
+
+  // Countries outside Africa or without a documented mobile-money network
+  // receive the card simulator, never an invented mobile provider.
+  const fallback = config.test_mode && config.payment_methods.some((method) =>
+    method.code === 'CARD_SIM' && method.channel === 'card')
+  return fallback ? [{
+    code: 'CARD_SIM',
+    label: 'Carte bancaire',
+    hint: 'Visa · Mastercard · American Express — simulation',
+    logo: '/payment-logos/visa.svg',
+  }] : []
 }
 
 export function methodName(code: string | null): string {
-  return PAYMENT_METHODS.find((method) => method.code === code)?.label ?? (code ? (AFRICAN_NETWORK_NAMES as Record<string, string>)[code] ?? (code === 'AFRICA_WALLET_TEST' ? 'Autre portefeuille mobile' : code) : '—')
+  return (code === 'CARD_SIM' ? 'Carte bancaire' : undefined) ?? PAYMENT_METHODS.find((method) => method.code === code)?.label ?? (code ? (AFRICAN_NETWORK_NAMES as Record<string, string>)[code] ?? (code === 'AFRICA_WALLET_TEST' ? 'Autre portefeuille mobile' : code) : '—')
 }
 
 export function isInFlight(status: PaymentStatus): boolean {

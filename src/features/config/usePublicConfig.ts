@@ -9,7 +9,7 @@ export interface PublicConfig {
   legal_forms: string[]
   rccm_required: boolean
   nif_required: boolean
-  payment_methods: { code: string; label: string; channel: 'mobile_money' | 'manual'; countries: string[] }[]
+  payment_methods: { code: string; label: string; channel: 'mobile_money' | 'card' | 'manual'; countries: string[] }[]
 }
 
 export function usePublicConfig() {

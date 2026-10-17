@@ -5,6 +5,7 @@ import { formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { PAYMENT_FAILURE_LABELS, isInFlight, methodName, usePaymentMethods, type PaymentAttempt } from './types'
 import { SimulatedMobilePayment } from './SimulatedMobilePayment'
+import { SimulatedCardPayment } from './SimulatedCardPayment'
 import { useAuth } from '@/app/AuthContext'
 import { fromInternationalPhone } from '@/lib/countries'
 
@@ -35,7 +36,12 @@ export function MethodPicker({ value, onChange, country }: MethodPickerProps) {
         >
           <input type="radio" name="payment-method" value={method.code} checked={value === method.code} onChange={() => onChange(method.code)} className="accent-[var(--color-primary)]" />
           <span className="flex h-11 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm">
-            {method.logo ? <img src={method.logo} alt={`Logo ${method.label}`} className="h-full w-full object-contain" /> : <span aria-label="Pictogramme neutre, logo officiel non fourni" className="flex flex-col items-center justify-center gap-0.5 text-emerald-800">
+            {method.code === 'CARD_SIM' ? (
+              <span className="flex items-center gap-0.5">
+                <img src="/payment-logos/visa.svg" alt="Visa" className="h-6 w-8 object-contain" />
+                <img src="/payment-logos/mastercard.svg" alt="Mastercard" className="h-6 w-8 object-contain" />
+              </span>
+            ) : method.logo ? <img src={method.logo} alt={`Logo ${method.label}`} className="h-full w-full object-contain" /> : <span aria-label="Pictogramme neutre, logo officiel non fourni" className="flex flex-col items-center justify-center gap-0.5 text-emerald-800">
               <Smartphone size={16} aria-hidden />
               <span className="text-[9px] font-black uppercase">{method.label.slice(0, 3)}</span>
             </span>}
@@ -121,13 +127,19 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onSimulate, onC
           <p className="rounded-xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 p-3 text-sm font-semibold text-[var(--color-text)]">
             MODE TEST — Paiement simulé. Aucun débit réel et aucun SMS ne sera envoyé.
           </p>
-          <SimulatedMobilePayment
+          {payment.method === 'CARD_SIM' ? (
+            <SimulatedCardPayment
+              amount={payment.amount}
+              onConfirmed={onSimulate}
+              onChangeMethod={onChangeMethod}
+            />
+          ) : <SimulatedMobilePayment
             method={payment.method ?? 'TMONEY'}
             amount={payment.amount}
             onConfirmed={onSimulate}
             onChangeMethod={onChangeMethod}
             paymentPhone={paymentPhone ?? user?.phone}
-          />
+          />}
         </div>
       )}
 
