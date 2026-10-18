@@ -13,5 +13,5 @@ export interface PublicConfig {
 }
 
 export function usePublicConfig() {
-  return useQuery({ queryKey: ['public-config'], queryFn: () => get<PublicConfig>('/config'), staleTime: 5 * 60_000 })
+  return useQuery({ queryKey: ['public-config'], queryFn: () => get<PublicConfig>('/config'), staleTime: 30_000, refetchOnMount: 'always', refetchOnWindowFocus: 'always', refetchInterval: 60_000 })
 }
