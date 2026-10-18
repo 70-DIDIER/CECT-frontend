@@ -321,9 +321,9 @@ function MyPackCard({ pack, detail, plan, onResume, onTopup }: { pack: UserPack;
         <>
           <dl className="mt-5 grid grid-cols-3 gap-4">
             {[
-              ['Disponible', pack.balance?.available ?? '0'],
+              ['Crédité', detail?.credited ?? '0'],
               ['Réservé', pack.balance?.reserved ?? '0'],
-              ['Consommé', pack.balance?.consumed ?? '0'],
+              ['Disponible', pack.balance?.available ?? '0'],
             ].map(([label, quantity]) => (
               <div key={label}>
                 <dt className="text-xs font-semibold text-[var(--color-text-muted)]">{label}</dt>
