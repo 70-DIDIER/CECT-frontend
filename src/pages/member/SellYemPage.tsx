@@ -189,13 +189,6 @@ export default function SellYemPage() {
               initial: destination.data?.account_number ?? '' },
           ]}
           onClose={() => setEditingDestination(false)}
-          >
-          <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-[var(--color-border)] p-3 text-center text-xs">
-            <span className="flex flex-col items-center gap-1"><Smartphone size={20} className="text-[var(--color-primary)]"/> Mobile Money</span>
-            <span className="flex flex-col items-center gap-1"><Building2 size={20} className="text-[var(--color-primary)]"/> Virement</span>
-            <span className="flex flex-col items-center gap-1 opacity-50"><CreditCard size={20}/> Carte : bientôt</span>
-          </div>
-          <p className="mb-3 text-xs text-[var(--color-text-muted)]">Le versement sur carte bancaire nécessitera un prestataire compatible. Aucun numéro de carte ne sera conservé ici.</p>
           onSubmit={async (values) => {
             if (!payoutChoices.some(choice => choice.value === values.method)) {
               throw new Error('Ce moyen de réception n’est pas disponible dans le pays sélectionné.')
@@ -210,7 +203,14 @@ export default function SellYemPage() {
             })
             await queryClient.invalidateQueries({ queryKey: ['payout-destination'] })
           }}
-        />
+        >
+          <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-[var(--color-border)] p-3 text-center text-xs">
+            <span className="flex flex-col items-center gap-1"><Smartphone size={20} className="text-[var(--color-primary)]"/> Mobile Money</span>
+            <span className="flex flex-col items-center gap-1"><Building2 size={20} className="text-[var(--color-primary)]"/> Virement</span>
+            <span className="flex flex-col items-center gap-1 opacity-50"><CreditCard size={20}/> Carte : bientôt</span>
+          </div>
+          <p className="mb-3 text-xs text-[var(--color-text-muted)]">Le versement sur carte bancaire nécessitera un prestataire compatible. Aucun numéro de carte ne sera conservé ici.</p>
+        </FormDialog>
       )}
     </>
   )
