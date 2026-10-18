@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
-import { Plus } from 'lucide-react'
+import { Plus, Store, QrCode, ArrowRightLeft, ReceiptText, ShieldCheck } from 'lucide-react'
 import { Panel } from '@/components/dashboard/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SegmentedControl } from '@/components/dashboard/SegmentedControl'
@@ -384,6 +384,10 @@ export default function MerchantPage() {
   const [section, setSection] = useState<Section>('payments')
   const packs = useQuery({ queryKey: ['my-packs'], queryFn: () => get<UserPack[]>('/me/packs'), staleTime: 0 })
   const merchantPacks = (packs.data ?? []).filter((pack) => pack.family === 'MARCHAND' && pack.status === 'active')
+  const overview = useQuery({ queryKey: ['merchant-balance'], queryFn: () => get<MerchantBalance>('/merchant/balance'), enabled: merchantPacks.length > 0, staleTime: 30_000 })
+  const clientPayments = useQuery({ queryKey: ['merchant-received'], queryFn: () => getRaw<{ data: ReceivedPayment[] }>('/merchant/payments', { per_page: 30 }).then(body=>body.data), enabled: merchantPacks.length > 0, staleTime: 30_000 })
+  const sum = (key: 'eligible' | 'reserved' | 'redeemed') =>
+    (overview.data?.packs ?? []).reduce((total, pack) => total + Number(pack[key]), 0).toFixed(6)
 
   return (
     <>
@@ -391,8 +395,23 @@ export default function MerchantPage() {
         <title>Espace marchand — CECT Togo</title>
       </Helmet>
 
-      <div className="max-w-3xl space-y-6">
-        <PageHeader title="Espace marchand" description="Encaissez des YEM, suivez vos paiements et faites-les racheter par la CECT." />
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="relative overflow-hidden rounded-[28px] bg-[#062519] px-6 py-8 text-white shadow-lg sm:px-9 sm:py-10">
+          <div className="pointer-events-none absolute -right-12 -top-28 h-72 w-72 rounded-full bg-emerald-500/20 blur-[65px]"/>
+          <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-emerald-200"><ShieldCheck size={15}/> Activité professionnelle · CECT</p>
+              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Espace marchand</h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/60">Encaissez les YEM réellement transférés par vos clients, contrôlez les opérations et demandez leur rééchange en FCFA.</p>
+            </div>
+            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10"><Store size={32}/></div>
+          </div>
+          <div className="relative mt-6 flex flex-wrap gap-2 text-xs text-white/65">
+            <span className="rounded-full border border-white/15 px-3 py-1.5">1. Votre QR identifie le marchand</span>
+            <span className="rounded-full border border-white/15 px-3 py-1.5">2. Le client transfère les YEM réels</span>
+            <span className="rounded-full border border-white/15 px-3 py-1.5">3. Rééchange après confirmation</span>
+          </div>
+        </div>
 
         {packs.data && merchantPacks.length === 0 ? (
           <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-5 text-sm">
@@ -403,6 +422,25 @@ export default function MerchantPage() {
           </p>
         ) : (
           <>
+            <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs marchands">
+              {([
+                { label: 'YEM rééchangeables', value: formatYem(sum('eligible')), icon: Store, subtitle: 'Vérifiés et disponibles' },
+                { label: 'En cours de rééchange', value: formatYem(sum('reserved')), icon: ArrowRightLeft, subtitle: 'Quantité réservée' },
+                { label: 'YEM déjà rééchangés', value: formatYem(sum('redeemed')), icon: ShieldCheck, subtitle: 'Opérations finalisées' },
+                { label: 'Paiements clients', value: String(clientPayments.data?.length ?? 0), icon: ReceiptText, subtitle: 'Derniers paiements visibles' },
+              ]).map(metric => (
+                <div key={metric.label} className="rounded-[22px] border border-[var(--color-border)] bg-[var(--dash-card)] p-5">
+                  <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600/10 text-[var(--color-primary)]"><metric.icon size={22}/></div>
+                  <p className="text-xs text-[var(--color-text-muted)]">{metric.label}</p>
+                  <p className="mt-2 text-2xl font-extrabold tracking-tight tabular-nums">{metric.value}</p>
+                  <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">{metric.subtitle}</p>
+                </div>
+              ))}
+            </section>
+            <div className="grid gap-2 rounded-2xl border border-emerald-500/15 bg-emerald-500/5 p-4 text-xs text-[var(--color-text-muted)] sm:grid-cols-[auto_1fr] sm:items-center">
+              <QrCode size={25} className="text-[var(--color-primary)]"/>
+              Un pack Marchand confère des droits d'encaissement et des limites. Il ne crée aucun YEM à l'activation : seuls les paiements réellement confirmés alimentent le solde rééchangeable.
+            </div>
             <SegmentedControl
               label="Section"
               value={section}
