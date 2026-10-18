@@ -257,12 +257,14 @@ function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: numb
   )
 }
 
-function PlanCard({ plan, owned, onSelect, onTopup }: { plan: PackPlan; owned: UserPack | undefined; onSelect: () => void; onTopup: () => void }) {
+function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: PackPlan; owned: UserPack | undefined; sellerSlotsUsed: number; onSelect: () => void; onTopup: () => void }) {
   const version = plan.current_version
   if (!version) return null
   const hasActive = owned?.status === 'active'
   const pending = owned?.status === 'pending_payment'
   const locked = plan.eligible === false
+  const sellerLimitReached = plan.family === 'VENDEUR' && sellerSlotsUsed >= 2
+  const cannotResubscribe = hasActive && plan.family === 'MARCHAND'
   const facts = packFacts(version).filter((fact) => fact.label !== 'Prix')
   const price = version.price_xof === 0 ? 'Gratuit' : formatXof(version.price_xof)
 
@@ -290,8 +292,8 @@ function PlanCard({ plan, owned, onSelect, onTopup }: { plan: PackPlan; owned: U
         {locked ? (
           <p className="text-sm text-[var(--color-text-muted)]">Ce pack n’est pas ouvert à votre type de compte.</p>
         ) : (
-          <button type="button" disabled={hasActive && plan.family !== 'PERSONNEL'} onClick={hasActive && plan.family === 'PERSONNEL' ? onTopup : onSelect} className={`${btnPrimary} w-full`}>
-            {hasActive ? (plan.family === 'PERSONNEL' ? 'Recharger' : 'Déjà souscrit') : pending ? 'Reprendre le paiement' : version.price_xof === 0 ? 'Activer gratuitement' : plan.payment_quote ? `Souscrire · ${formatXof(plan.payment_quote.total_amount)}` : 'Souscrire'}
+          <button type="button" disabled={sellerLimitReached || cannotResubscribe} onClick={hasActive && plan.family === 'PERSONNEL' ? onTopup : onSelect} className={`${btnPrimary} w-full`}>
+            {sellerLimitReached ? 'Limite : 2 packs Vendeur' : hasActive ? (plan.family === 'PERSONNEL' ? 'Recharger' : plan.family === 'MARCHAND' ? 'Pack Marchand actif' : 'Souscrire à nouveau') : pending ? 'Reprendre le paiement' : version.price_xof === 0 ? 'Activer gratuitement' : plan.payment_quote ? `Souscrire · ${formatXof(plan.payment_quote.total_amount)}` : 'Souscrire'}
           </button>
         )}
       </div>
@@ -382,6 +384,7 @@ export default function PacksCatalogPage() {
   }
 
   const myPacks = (mine.data ?? []).filter((pack) => pack.status === 'active' || pack.status === 'pending_payment')
+  const sellerSlotsUsed = myPacks.filter(pack => pack.family === 'VENDEUR').length
   const planById = new Map((catalog.data ?? []).map((plan) => [plan.id, plan]))
 
   function topup(pack: UserPack) {
@@ -436,6 +439,13 @@ export default function PacksCatalogPage() {
 
       {tab === 'catalog' && (
         <div className="space-y-10">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-5">
+            <div>
+              <p className="font-bold">Vos packs Vendeur : {sellerSlotsUsed} sur 2</p>
+              <p className="mt-1 text-sm text-[var(--color-text-muted)]">Vous pouvez prendre deux formules Vendeur, identiques ou différentes. Les packs Consommateur ne comptent pas dans cette limite ; Personnel se recharge.</p>
+            </div>
+            <span className="rounded-xl bg-emerald-700/10 px-4 py-2 text-sm font-bold text-[var(--color-primary)]">{Math.max(0, 2 - sellerSlotsUsed)} place(s) Vendeur</span>
+          </div>
           {catalog.isPending && <div className="h-48 animate-pulse rounded-[18px] bg-[var(--chart-track)]" />}
           {catalog.isError && (
             <p role="alert" className="rounded-[18px] border border-[var(--color-border)] bg-[var(--dash-card)] p-6 text-sm">
@@ -447,7 +457,7 @@ export default function PacksCatalogPage() {
           )}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {FAMILIES.flatMap(({ family }) => (catalog.data ?? []).filter((plan) => plan.family === family)).map((plan) => (
-              <PlanCard key={plan.id} plan={plan} owned={ownedByPlan.get(plan.id)} onSelect={() => setSelected(plan)} onTopup={() => { const pack = ownedByPlan.get(plan.id); if (pack) topup(pack) }} />
+              <PlanCard key={plan.id} plan={plan} owned={ownedByPlan.get(plan.id)} sellerSlotsUsed={sellerSlotsUsed} onSelect={() => setSelected(plan)} onTopup={() => { const pack = ownedByPlan.get(plan.id); if (pack) topup(pack) }} />
             ))}
           </div>
         </div>
