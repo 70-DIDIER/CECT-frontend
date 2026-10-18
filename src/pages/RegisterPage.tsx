@@ -74,8 +74,9 @@ export default function RegisterPage() {
   const { t } = useTranslation()
   const [step, setStep] = useState(0)
   const navigate = useNavigate()
-  const publicFees = usePublicConfig().data?.membership_fees
-  const legalForms = usePublicConfig().data?.legal_forms ?? ['SARL', 'SA', 'SAS', 'SASU', 'EURL', 'GIE', 'Association', 'Coopérative', 'Auto-entrepreneur', 'Autre']
+  const publicConfig = usePublicConfig()
+  const publicFees = publicConfig.data?.membership_fees
+  const legalForms = publicConfig.data?.legal_forms ?? ['SARL', 'SA', 'SAS', 'SASU', 'EURL', 'GIE', 'Association', 'Coopérative', 'Auto-entrepreneur', 'Autre']
   const { user, verifyEmail, resendOtp } = useAuth()
   const [verification, setVerification] = useState<{ challengeId: string; sentTo: string } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -222,6 +223,7 @@ export default function RegisterPage() {
                       {(['physical', 'legal'] as const).map((type) => (
                         <option key={type} value={type}>
                           {t(`auth.register.${type}`)}
+                          {publicFees ? ` — ${formatXof(type === 'legal' ? publicFees.legal_person : publicFees.natural_person)}` : ''}
                         </option>
                       ))}
                     </select>
@@ -230,7 +232,7 @@ export default function RegisterPage() {
                   <div className="rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Frais d'adhésion à la coopérative</div>
                     <div className="mt-1 text-xl font-extrabold text-[var(--color-primary)]" aria-live="polite">
-                      {publicFees ? formatXof(personType === 'legal' ? publicFees.legal_person : publicFees.natural_person) : 'Chargement du tarif…'}
+                      {publicFees ? formatXof(personType === 'legal' ? publicFees.legal_person : publicFees.natural_person) : publicConfig.isError ? 'Tarif temporairement indisponible' : 'Chargement du tarif…'}
                     </div>
                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                       Tarif défini par le Superadmin. Aucun règlement ici : paiement simulé après vérification de l'e-mail.
