@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil } from 'lucide-react'
+import { Pencil, Building2, Smartphone, CreditCard } from 'lucide-react'
 import { Panel } from '@/components/dashboard/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Steps } from '@/components/ui/Steps'
@@ -11,11 +11,13 @@ import { ExchangeCard, type Exchange } from '@/features/exchanges/ExchangeCard'
 import { formatYem } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { methodName, usePaymentMethods } from '@/features/payments/types'
+import { usePublicConfig } from '@/features/config/usePublicConfig'
 import type { UserPack } from '@/features/packs/types'
 
 interface PayoutDestination {
   method: string
   phone: string | null
+  country?: string | null
   bank_name: string | null
   account_holder: string | null
   account_number: string | null
@@ -32,7 +34,12 @@ function describeDestination(destination: PayoutDestination): string {
 export default function SellYemPage() {
   const queryClient = useQueryClient()
   const [editingDestination, setEditingDestination] = useState(false)
-  const methods = usePaymentMethods()
+  const [payoutCountry, setPayoutCountry] = useState('TG')
+  const publicConfig = usePublicConfig().data
+  const methods = usePaymentMethods(payoutCountry).filter(method => method.code !== 'CARD_SIM')
+  const canBank = publicConfig?.payment_methods.some(method => method.code === 'BANK_TRANSFER' && method.channel === 'manual') ?? false
+  const payoutChoices = [...methods.map(method => ({ value: method.code, label: method.label })), ...(canBank ? [{ value: 'BANK_TRANSFER', label: 'Virement bancaire' }] : [])]
+  const profile = useQuery({ queryKey: ['member-user-profile'], queryFn: () => get<{ phone: string | null }>('/me'), staleTime: 60_000 })
   const [packId, setPackId] = useState('')
   const [quantity, setQuantity] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -103,7 +110,7 @@ export default function SellYemPage() {
           title="Moyen de réception"
           subtitle="Où recevoir vos versements"
           action={
-            <button type="button" onClick={() => setEditingDestination(true)} className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-[var(--color-border)] px-3 text-sm font-semibold hover:bg-[var(--dash-bg)]">
+            <button type="button" onClick={() => { setPayoutCountry(destination.data?.country ?? 'TG'); setEditingDestination(true) }} className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-[var(--color-border)] px-3 text-sm font-semibold hover:bg-[var(--dash-bg)]">
               <Pencil size={14} aria-hidden /> {destination.data ? 'Modifier' : 'Renseigner'}
             </button>
           }
@@ -160,23 +167,46 @@ export default function SellYemPage() {
       {editingDestination && (
         <FormDialog
           title="Moyen de réception"
-          subtitle="Une confirmation par code e-mail est demandée pour modifier ce moyen."
-          submitLabel="Enregistrer"
+          subtitle="Choisissez d’abord votre pays et votre mode de réception. Seuls les champs nécessaires s'affichent ; un code e-mail protège chaque modification."
+          submitLabel="Enregistrer mon moyen de réception"
+          onFieldChange={(name,value) => { if (name === 'country') setPayoutCountry(value) }}
           fields={[
-            { name: 'method', label: 'Moyen', type: 'select', initial: destination.data?.method, options: methods.map((method) => ({ value: method.code, label: method.label })) },
-            { name: 'phone', label: 'Téléphone (T-Money, Flooz) — format +22890123456', initial: destination.data?.phone ?? '' },
-            { name: 'bank_name', label: 'Banque (virement)', initial: destination.data?.bank_name ?? '' },
-            { name: 'account_holder', label: 'Titulaire du compte (virement)', initial: destination.data?.account_holder ?? '' },
-            { name: 'account_number', label: 'Numéro de compte (virement)', initial: destination.data?.account_number ?? '' },
+            { name: 'country', label: 'Pays de réception', type: 'select',
+              initial: destination.data?.country ?? 'TG',
+              options: (publicConfig?.payout_countries ?? []).map(country => ({ value: country.code, label: country.name + ' (+' + country.dial_code + ')' })) },
+            { name: 'method', label: 'Moyen de réception', type: 'select', required: true,
+              initial: destination.data?.method && payoutChoices.some(choice => choice.value === destination.data?.method)
+                ? destination.data.method : payoutChoices[0]?.value ?? 'BANK_TRANSFER',
+              options: payoutChoices },
+            { name: 'phone', label: 'Numéro Mobile Money avec indicatif (ex. +22890123456)',
+              hideWhen: { name: 'method', value: 'BANK_TRANSFER' }, required: true,
+              initial: destination.data?.phone ?? profile.data?.phone ?? '' },
+            { name: 'bank_name', label: 'Banque', showWhen: { name: 'method', value: 'BANK_TRANSFER' }, required: true,
+              initial: destination.data?.bank_name ?? '' },
+            { name: 'account_holder', label: 'Nom complet du titulaire', showWhen: { name: 'method', value: 'BANK_TRANSFER' }, required: true,
+              initial: destination.data?.account_holder ?? '' },
+            { name: 'account_number', label: 'IBAN / numéro de compte', showWhen: { name: 'method', value: 'BANK_TRANSFER' }, required: true,
+              initial: destination.data?.account_number ?? '' },
           ]}
           onClose={() => setEditingDestination(false)}
+          >
+          <div className="mb-4 grid grid-cols-3 gap-2 rounded-xl border border-[var(--color-border)] p-3 text-center text-xs">
+            <span className="flex flex-col items-center gap-1"><Smartphone size={20} className="text-[var(--color-primary)]"/> Mobile Money</span>
+            <span className="flex flex-col items-center gap-1"><Building2 size={20} className="text-[var(--color-primary)]"/> Virement</span>
+            <span className="flex flex-col items-center gap-1 opacity-50"><CreditCard size={20}/> Carte : bientôt</span>
+          </div>
+          <p className="mb-3 text-xs text-[var(--color-text-muted)]">Le versement sur carte bancaire nécessitera un prestataire compatible. Aucun numéro de carte ne sera conservé ici.</p>
           onSubmit={async (values) => {
+            if (!payoutChoices.some(choice => choice.value === values.method)) {
+              throw new Error('Ce moyen de réception n’est pas disponible dans le pays sélectionné.')
+            }
             await put('/me/payout-destination', {
               method: values.method,
-              phone: values.phone || null,
-              bank_name: values.bank_name || null,
-              account_holder: values.account_holder || null,
-              account_number: values.account_number || null,
+              country: values.country,
+              phone: values.method === 'BANK_TRANSFER' ? null : values.phone.trim() || null,
+              bank_name: values.method === 'BANK_TRANSFER' ? values.bank_name.trim() : null,
+              account_holder: values.method === 'BANK_TRANSFER' ? values.account_holder.trim() : null,
+              account_number: values.method === 'BANK_TRANSFER' ? values.account_number.trim() : null,
             })
             await queryClient.invalidateQueries({ queryKey: ['payout-destination'] })
           }}
