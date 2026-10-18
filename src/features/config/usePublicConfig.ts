@@ -10,6 +10,7 @@ export interface PublicConfig {
   rccm_required: boolean
   nif_required: boolean
   payment_methods: { code: string; label: string; channel: 'mobile_money' | 'card' | 'manual'; countries: string[] }[]
+  payout_countries: { code: string; name: string; dial_code: string; national_lengths: number[] }[]
 }
 
 export function usePublicConfig() {
