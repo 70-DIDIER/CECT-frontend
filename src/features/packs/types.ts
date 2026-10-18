@@ -11,7 +11,7 @@ export interface PackVersion {
   total_quota: string | null
   cumulative: boolean | null
   eligible_person_types: string[]
-  rules: { discount_bps?: number; min_topup_xof?: number; reference_value_xof?: number }
+  rules: { discount_bps?: number; min_topup_xof?: number; reference_value_xof?: number; cashback?: { enabled: boolean; rate_bps: number; max_yem: string | null } }
 }
 
 export interface PackPlan {
@@ -43,7 +43,7 @@ export interface SubscribeResult {
 
 export const FAMILIES: ReadonlyArray<{ family: PackFamily; title: string; summary: string }> = [
   { family: 'CONSOMMATEUR', title: 'Consommateur', summary: 'Un quota de YEM crédité chaque mois pour payer chez les marchands du réseau.' },
-  { family: 'PERSONNEL', title: 'Personnel', summary: 'Un solde que vous rechargez à la demande, avec une remise sur chaque rechargement.' },
+  { family: 'PERSONNEL', title: 'Personnel', summary: 'Un solde que vous rechargez à la demande, avec des YEM bonus selon les conditions de votre formule.' },
   { family: 'VENDEUR', title: 'Vendeur', summary: 'Vendez vos YEM à la CECT et recevez le montant en FCFA sur votre moyen de réception.' },
   { family: 'MARCHAND', title: 'Marchand', summary: 'Pour les personnes morales : encaissez des YEM auprès de vos clients et faites-les racheter par la CECT.' },
 ]
@@ -76,7 +76,7 @@ export function packFacts(version: PackVersion): { label: string; value: string 
   const term = termLabel(version)
   if (term) facts.push({ label: 'Durée', value: term })
   if (version.total_quota) facts.push({ label: 'Quota total', value: formatYem(version.total_quota) })
-  if (version.rules.discount_bps) facts.push({ label: 'Remise', value: formatBps(version.rules.discount_bps) })
+  if (version.rules.cashback?.enabled) facts.push({ label: 'Bonus YEM', value: formatBps(version.rules.cashback.rate_bps) + ' de YEM supplémentaires' })
   if (version.rules.min_topup_xof) facts.push({ label: 'Rechargement minimum', value: formatXof(version.rules.min_topup_xof) })
   return facts
 }
