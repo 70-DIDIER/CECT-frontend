@@ -12,6 +12,12 @@ export interface MemberPack {
   discount_bps: number | null
   quota_per_period: string
   quota_used: string
+  available: string
+  reserved: string
+  credited: string
+  credited_purchase: string
+  credited_cashback: string
+  consumed: string
   period: { number: number; cycles: number; starts_at: string; ends_at: string; next_credit_at: string } | null
 }
 
@@ -86,6 +92,10 @@ interface ApiDashboard {
     discount_bps: number | null
     available: string | null
     reserved: string | null
+    credited: string
+    credited_purchase: string
+    credited_cashback: string
+    consumed: string | null
     consumed: string | null
     period: MemberPack['period']
     activated_at: string | null
@@ -107,7 +117,7 @@ const MERCHANT_STEPS: OperationInProgress['steps'] = [
 const EXCHANGE_STEPS: OperationInProgress['steps'] = [
   { label: 'Demande créée', description: 'YEM réservés sur votre pack' },
   { label: 'YEM envoyés', description: 'Vous transférez les YEM à la CECT' },
-  { label: 'Réception contrôlée', description: 'Un validateur confirme la réception' },
+  { label: 'Réception contrôlée', description: 'La Comptabilité confirme la réception' },
   { label: 'Versement', description: 'Le montant est versé en FCFA' },
 ]
 
@@ -142,6 +152,12 @@ export async function fetchMemberDashboard(): Promise<MemberDashboardData> {
     discount_bps: pack.discount_bps,
     quota_per_period: pack.quota_per_period ?? '0',
     quota_used: addQuantity(pack.reserved ?? '0', pack.consumed ?? '0'),
+    available: pack.available ?? '0',
+    reserved: pack.reserved ?? '0',
+    credited: pack.credited ?? '0',
+    credited_purchase: pack.credited_purchase ?? '0',
+    credited_cashback: pack.credited_cashback ?? '0',
+    consumed: pack.consumed ?? '0',
     period: pack.period,
   }))
 
