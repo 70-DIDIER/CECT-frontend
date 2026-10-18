@@ -24,11 +24,12 @@ interface FormDialogProps {
   children?: ReactNode
   onSubmit: (values: Record<string, string>) => Promise<void>
   onClose: () => void
+  onFieldChange?: (name: string, value: string) => void
 }
 
 const INPUT = 'w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]'
 
-export function FormDialog({ title, subtitle, fields, submitLabel, danger = false, confirmText, children, onSubmit, onClose }: FormDialogProps) {
+export function FormDialog({ title, subtitle, fields, submitLabel, danger = false, confirmText, children, onSubmit, onClose, onFieldChange }: FormDialogProps) {
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field.name, field.initial ?? field.options?.[0]?.value ?? ''])))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -46,7 +47,7 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
     }
   }
 
-  const set = (name: string, value: string) => setValues((current) => ({ ...current, [name]: value }))
+  const set = (name: string, value: string) => { setValues((current) => ({ ...current, [name]: value })); onFieldChange?.(name, value) }
 
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
