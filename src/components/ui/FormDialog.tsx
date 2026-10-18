@@ -10,6 +10,8 @@ export interface FormField {
   required?: boolean
   initial?: string
   options?: ReadonlyArray<{ value: string; label: string }>
+  showWhen?: { name: string; value: string }
+  hideWhen?: { name: string; value: string }
 }
 
 interface FormDialogProps {
@@ -60,7 +62,8 @@ export function FormDialog({ title, subtitle, fields, submitLabel, danger = fals
           {subtitle && <p className="mb-4 text-sm text-[var(--color-text-muted)]">{subtitle}</p>}
           <form onSubmit={(event) => void submit(event)} className="space-y-4">
             {children}
-            {fields.map((field) => (
+            {fields.filter(field => (!field.showWhen || values[field.showWhen.name] === field.showWhen.value)
+              && (!field.hideWhen || values[field.hideWhen.name] !== field.hideWhen.value)).map((field) => (
               <div key={field.name}>
                 <label htmlFor={`f-${field.name}`} className="mb-1.5 block text-sm font-medium text-[var(--color-text)]">
                   {field.label}
