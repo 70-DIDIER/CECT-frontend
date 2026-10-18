@@ -96,7 +96,6 @@ interface ApiDashboard {
     credited_purchase: string
     credited_cashback: string
     consumed: string | null
-    consumed: string | null
     period: MemberPack['period']
     activated_at: string | null
     expires_at: string | null
