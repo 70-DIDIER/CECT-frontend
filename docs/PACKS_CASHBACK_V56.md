@@ -16,3 +16,11 @@ Décision du 18 octobre 2026. Référence normative : `70-DIDIER/cecet-api:Cahie
 Tout changement du parcours membre doit vérifier que les soldes achetés et offerts demeurent distincts dans le tableau de bord, que seuls les packs publiés sont proposés et que le tarif affiché et le montant payé correspondent à la version du pack souscrite. Les nouvelles grilles commerciales nécessitent une validation métier avant publication.
 
 Ce fichier est documentaire. Il n'exécute aucune modification sur les souscriptions ni les tarifs des 25 packs existants.
+
+## Complément v5.7 — gestion Admin et nouvelle adhésion
+
+- La console `cect-admin` utilise des onglets séparés Vendeur/Consommateur/Personnel/Marchand et une vue Archives. L'archive d'un pack publié est une **désactivation commerciale** et non un effacement des droits déjà achetés ; le portail ne liste pas les packs archivés comme souscriptibles.
+- Pour tout nouveau pack Consommateur, le SuperAdmin saisit **un prix FCFA** et un nombre de périodes ; l'API calcule le quota YEM selon le cours de vente en vigueur et fige ce cours dans la version. Exemple : 100 000 FCFA / 650 = 153,846153 YEM achetés ; 5 % donne 7,692307 YEM en plus, soit 161,538460 YEM, sous réserve des règles d'arrondi backend.
+- Le SuperAdmin règle le cashback individuellement dans les versions Consommateur/Personnel, jamais Vendeur/Marchand ; aucune remise FCFA.
+- Le formulaire public `/inscription` accepte un lien d'invitation administratif préremplissant **type PF/PM, prénom, nom et e-mail**, mais le candidat doit fournir lui-même ses données, choisir son mot de passe, accepter les statuts, signer et vérifier son email. Une invitation n'est pas une inscription ni un paiement.
+- Les membres suspendus ou clos ne doivent pouvoir effectuer aucune nouvelle opération. L'API reste la source des autorisations et historiques de compte.
