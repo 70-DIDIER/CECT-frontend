@@ -86,7 +86,18 @@ export default function RegisterPage() {
 
   const { register, handleSubmit, watch, control, setError, getValues, formState: { errors, isSubmitting }, trigger } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { personType: 'physical', country: DEFAULT_COUNTRY, location: 'Lomé', date: new Date().toISOString().slice(0, 10) },
+    defaultValues: (() => {
+      const params = new URLSearchParams(window.location.search)
+      return {
+        personType: params.get('person_type') === 'legal' ? 'legal' : 'physical',
+        firstName: (params.get('first_name') ?? '').slice(0, 100),
+        lastName: (params.get('last_name') ?? '').slice(0, 100),
+        email: (params.get('email') ?? '').slice(0, 255),
+        country: DEFAULT_COUNTRY,
+        location: 'Lomé',
+        date: new Date().toISOString().slice(0, 10),
+      }
+    })(),
   })
 
   const personType = watch('personType')
