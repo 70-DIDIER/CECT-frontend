@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { formatXof } from '@/lib/format'
 import { CountrySelect } from '@/components/ui/CountrySelect'
 import { DEFAULT_COUNTRY, findCountry, toInternationalPhone } from '@/lib/countries'
 import type { CountryCode } from 'libphonenumber-js/min'
@@ -75,7 +74,6 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0)
   const navigate = useNavigate()
   const publicConfig = usePublicConfig()
-  const publicFees = publicConfig.data?.membership_fees
   const legalForms = publicConfig.data?.legal_forms ?? ['SARL', 'SA', 'SAS', 'SASU', 'EURL', 'GIE', 'Association', 'Coopérative', 'Auto-entrepreneur', 'Autre']
   const { user, verifyEmail, resendOtp } = useAuth()
   const [verification, setVerification] = useState<{ challengeId: string; sentTo: string } | null>(null)
@@ -234,23 +232,16 @@ export default function RegisterPage() {
                       {(['physical', 'legal'] as const).map((type) => (
                         <option key={type} value={type}>
                           {t(`auth.register.${type}`)}
-                          {publicFees ? ` — ${formatXof(type === 'legal' ? publicFees.legal_person : publicFees.natural_person)}` : ''}
                         </option>
                       ))}
                     </select>
                   </div>
+                   <p className="rounded-xl border border-[var(--color-border)] p-3 text-sm text-[var(--color-text-muted)]">
+                     La vérification d'identité (KYC) est obligatoire après confirmation de l'e-mail.
+                     Les frais d'adhésion ne seront affichés qu'après approbation du KYC.
+                   </p>
 
-                  <div className="rounded-2xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Frais d'adhésion à la coopérative</div>
-                    <div className="mt-1 text-xl font-extrabold text-[var(--color-primary)]" aria-live="polite">
-                      {publicFees ? formatXof(personType === 'legal' ? publicFees.legal_person : publicFees.natural_person) : publicConfig.isError ? 'Tarif temporairement indisponible' : 'Chargement du tarif…'}
-                    </div>
-                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                      Tarif défini par le Superadmin. Aucun règlement ici : paiement simulé après vérification de l'e-mail.
-                    </p>
-                  </div>
-
-                  {personType === 'legal' && (
+                   {personType === 'legal' && (
                     <>
                       <div>
                         <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">{t('auth.register.companyName')} *</label>
