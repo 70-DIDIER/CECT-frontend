@@ -29,7 +29,7 @@ const SECTIONS: NavSection[] = [
   },
 ]
 
-const ONBOARDING_SECTIONS: NavSection[] = [{ title: 'Compte', items: [{ label: 'Adhésion', icon: BadgeCheck, to: '/espace/adhesion' }] }]
+const ONBOARDING_SECTIONS: NavSection[] = [{ title: 'Compte', items: [{ label: 'Vérification KYC', icon: BadgeCheck, to: '/espace/kyc' }, { label: 'Adhésion', icon: BadgeCheck, to: '/espace/adhesion' }] }]
 
 const TITLES: Record<string, string> = {
   '/espace': 'Accueil',
@@ -40,6 +40,7 @@ const TITLES: Record<string, string> = {
   '/espace/marchand': 'Espace marchand',
   '/espace/profil': 'Profil et sécurité',
   '/espace/adhesion': 'Adhésion',
+  '/espace/kyc': 'Vérification KYC',
 }
 
 export function MemberLayout() {
@@ -54,7 +55,8 @@ export function MemberLayout() {
   if (!user) return <Navigate to="/connexion" replace />
   if (isAdminRole(user.role)) return <Navigate to="/admin" replace />
   const onboarding = user.status !== 'active'
-  if (onboarding && location.pathname !== '/espace/adhesion') return <Navigate to="/espace/adhesion" replace />
+  if (user.status === 'pending_kyc' && location.pathname !== '/espace/kyc') return <Navigate to="/espace/kyc" replace />
+  if (onboarding && !['/espace/adhesion', '/espace/kyc'].includes(location.pathname)) return <Navigate to={user.status === 'pending_kyc' ? '/espace/kyc' : '/espace/adhesion'} replace />
 
   async function handleLogout() {
     await logout()
