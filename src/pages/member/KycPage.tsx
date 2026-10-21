@@ -2,19 +2,22 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileCheck2, ShieldCheck, UploadCloud } from 'lucide-react'
+import { FileCheck2, ShieldCheck, UploadCloud, ScanFace, Video } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
-import { ensureCsrfCookie, get, http, toApiError } from '@/lib/api'
+import { ensureCsrfCookie, get, http, post, toApiError } from '@/lib/api'
 import { Panel } from '@/components/dashboard/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
 
 interface CaseState {
   account_status: string
+  provider: 'manual' | 'didit'
   kyc: {
     id: string
-    status: 'submitted' | 'approved' | 'rejected' | 'needs_information'
+    status: 'provider_pending' | 'submitted' | 'approved' | 'rejected' | 'needs_information'
     submitted_at: string
     reviewed_at: string | null
+    provider_status?: string | null
+    can_resume?: boolean
     review_reason: string | null
   } | null
 }
@@ -32,6 +35,8 @@ export default function KycPage() {
   const [back, setBack] = useState<File | null>(null)
   const [company, setCompany] = useState<File | null>(null)
   const [accepted, setAccepted] = useState(false)
+  const [diditAccepted, setDiditAccepted] = useState(false)
+  const [diditBusy, setDiditBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isCompany = user?.personType === 'legal'
 
@@ -75,6 +80,36 @@ export default function KycPage() {
     onError: (err: unknown) => setError(toApiError(err).message),
   })
 
+  async function startDidit() {
+    if (!diditAccepted) { setError('Acceptez la notice de confidentialité pour continuer.'); return }
+    setError(null)
+    setDiditBusy(true)
+    try {
+      const result = await post<{ url: string; status: string }>('/me/kyc/didit/start', {
+        privacy_notice_accepted: true,
+      })
+      // The backend allow-lists Didit's official hosted verification domain.
+      window.location.assign(result.url)
+    } catch (err) {
+      setError(toApiError(err).message)
+      setDiditBusy(false)
+    }
+  }
+
+  async function checkDidit() {
+    setDiditBusy(true)
+    setError(null)
+    try {
+      await post('/me/kyc/didit/refresh', {})
+      await queryClient.invalidateQueries({ queryKey: ['member-kyc'] })
+      await refresh()
+    } catch (err) {
+      setError(toApiError(err).message)
+    } finally {
+      setDiditBusy(false)
+    }
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
@@ -107,6 +142,42 @@ export default function KycPage() {
           </div>
         </Panel>
 
+        {state?.provider === 'didit' && user?.status === 'pending_kyc' && (
+          <Panel title="Contrôle biométrique officiel avec Didit">
+            <div className="space-y-4 text-sm">
+              <div className="flex gap-3 items-start">
+                <ScanFace className="shrink-0 text-[var(--color-primary)]" size={24} />
+                <p>Didit vous guidera pour scanner votre pièce officielle, prendre un selfie en direct,
+                  réaliser une vérification vidéo de présence (liveness actif) et comparer votre visage
+                  à la photo du document. Votre caméra s'ouvre uniquement pendant la vérification sécurisée.</p>
+              </div>
+              <div className="flex gap-3 items-start">
+                <Video className="shrink-0 text-[var(--color-primary)]" size={24} />
+                <p>Préparez votre document, choisissez un endroit éclairé et autorisez l'accès à la caméra
+                  sur la page Didit. En cas de doute, un Validateur CECT examine les résultats.</p>
+              </div>
+              <label className="flex items-start gap-3">
+                <input type="checkbox" className="mt-1" checked={diditAccepted}
+                  onChange={e => setDiditAccepted(e.target.checked)} />
+                <span>J'ai lu la notice KYC. J'accepte de lancer le contrôle documentaire et biométrique
+                  chez Didit, prestataire tiers de CECT, et comprends que des données d'identité et de visage
+                  seront traitées selon la notice de confidentialité.</span>
+              </label>
+              <button type="button" onClick={() => void startDidit()}
+                disabled={!diditAccepted || diditBusy}
+                className="min-h-11 w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-50">
+                {diditBusy ? 'Connexion à Didit…' : status === 'provider_pending' ? 'Reprendre la vérification Didit' : 'Commencer la vérification Didit'}
+              </button>
+              {!!state.kyc && <button type="button" onClick={() => void checkDidit()} disabled={diditBusy}
+                className="min-h-11 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 font-semibold disabled:opacity-50">
+                Vérifier le résultat de mon contrôle
+              </button>}
+              {error && <p role="alert" className="text-[var(--color-danger)]">{error}</p>}
+              {status === 'provider_pending' && <p>Vérification en cours ou non terminée. Vous ne pouvez pas payer pour le moment.</p>}
+            </div>
+          </Panel>
+        )}
+
         {query.isPending && <p role="status">Chargement de votre dossier…</p>}
         {query.isError && <p role="alert">Impossible de consulter le dossier KYC. Actualisez la page.</p>}
 
@@ -127,7 +198,7 @@ export default function KycPage() {
           </p>
         )}
 
-        {!query.isPending && (!status || status === 'rejected' || status === 'needs_information') && (
+        {state?.provider !== 'didit' && !query.isPending && (!status || status === 'rejected' || status === 'needs_information') && (
           <Panel title={status ? 'Corriger le dossier KYC' : 'Soumettre vos justificatifs'}>
             <form onSubmit={submit} className="space-y-4">
               <div>
