@@ -335,10 +335,10 @@ function MyPackCard({ pack, detail, plan, onResume, onTopup }: { pack: UserPack;
   const unlockedNumber = Number.parseFloat(unlocked)
   const progress = Number.isFinite(total) && total > 0 ? Math.min(100, Math.max(0, unlockedNumber / total * 100)) : 0
   const metrics = [
-    { label: 'Crédité', value: contractual, help: personal ? 'Total de YEM déjà achetés et crédités' : 'Droits YEM prévus sur toute la durée du contrat', icon: Coins },
-    { label: 'Disponible', value: pack.balance?.available ?? '0', help: 'YEM débloqués, immédiatement utilisables', icon: Wallet },
+    { label: pack.family === 'VENDEUR' ? 'Droit contractuel' : pack.family === 'MARCHAND' ? 'Plafond contrat' : 'Crédité', value: contractual, help: pack.family === 'VENDEUR' ? 'Capacité à céder vos propres YEM sur le contrat, et non des YEM reçus' : personal ? 'Total de YEM déjà achetés et crédités' : 'Droits YEM prévus sur toute la durée du contrat', icon: Coins },
+    { label: pack.family === 'VENDEUR' ? 'Cessible' : 'Disponible', value: pack.balance?.available ?? '0', help: pack.family === 'VENDEUR' ? 'Droit de vente déjà ouvert et non réservé, à exercer sur vos propres YEM' : 'YEM débloqués, immédiatement utilisables', icon: Wallet },
     { label: 'Réservé', value: pack.balance?.reserved ?? '0', help: 'YEM engagés dans des opérations en cours', icon: Clock3 },
-    { label: 'Consommé', value: pack.balance?.consumed ?? '0', help: 'YEM déjà utilisés ou cédés définitivement', icon: CheckCircle2 },
+    { label: pack.family === 'VENDEUR' ? 'Déjà cédé' : 'Consommé', value: pack.balance?.consumed ?? '0', help: 'YEM déjà utilisés ou cédés définitivement', icon: CheckCircle2 },
   ]
   return (
     <article className="group relative min-w-0 overflow-hidden rounded-[26px] border border-[var(--color-border)] bg-[var(--dash-card)] shadow-[var(--shadow-card)] transition-all hover:border-emerald-500/45 hover:shadow-[0_18px_60px_rgba(0,0,0,.12)]">
@@ -360,7 +360,7 @@ function MyPackCard({ pack, detail, plan, onResume, onTopup }: { pack: UserPack;
               </div>
             ))}
           </dl>
-          <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">{personal ? 'Crédité = achats confirmés. Aucun blocage lié au calendrier.' : 'Crédité = quota prévu sur le contrat, et non le solde utilisable. Le disponible se débloque au rythme prévu.'}</p>
+          <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">{personal ? 'Crédité = achats confirmés. Aucun blocage lié au calendrier.' : pack.family === 'VENDEUR' ? 'Le droit contractuel n’est pas un versement de YEM : c’est la quantité de vos propres YEM que la CECT vous autorise à céder. Seul le droit ouvert est cessible.' : 'Crédité = quota prévu sur le contrat, et non le solde utilisable. Le disponible se débloque au rythme prévu.'}</p>
           {personal ? (
             <div className="mt-4 flex items-start gap-3 rounded-2xl bg-emerald-500/[.075] p-4">
               <Sparkles className="mt-0.5 shrink-0 text-[var(--color-primary)]" size={20} aria-hidden />
