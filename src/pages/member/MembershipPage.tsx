@@ -6,7 +6,7 @@ import { CheckCircle2, Pencil, ShieldCheck, Smartphone } from 'lucide-react'
 import { Panel } from '@/components/dashboard/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useAuth } from '@/app/AuthContext'
-import { get, newIdempotencyKey, post } from '@/lib/api'
+import { ApiError, get, newIdempotencyKey, post } from '@/lib/api'
 import { formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { AmountBreakdown, MethodPicker, PaymentCheckout } from '@/features/payments/PaymentCheckout'
@@ -20,6 +20,8 @@ interface MembershipState {
   fee_due: number
   payment_quote: { net_amount: number; fee_amount: number; total_amount: number } | null
   payment_attempts: PaymentAttempt[]
+  sandbox_preview?: boolean
+  payment_enabled?: boolean
 }
 
 const QUERY_KEY = ['membership']
@@ -61,6 +63,7 @@ export default function MembershipPage() {
   const state = query.data
   const attempt = state?.payment_attempts[0]
   const active = state?.status === 'active' || user?.status === 'active'
+  const sandboxPreview = state?.sandbox_preview === true && state?.payment_enabled === false
 
   useEffect(() => {
     if (!active) return
@@ -70,8 +73,18 @@ export default function MembershipPage() {
     })
   }, [active, navigate, queryClient, refresh])
 
+  useEffect(() => {
+    // A pending-KYC member who has not completed the document test has no
+    // authorization even to preview this step. Redirect to the KYC page.
+    if (user?.status === 'pending_kyc'
+      && query.isError && query.error instanceof ApiError && query.error.status === 403) {
+      navigate('/espace/kyc', { replace: true })
+    }
+  }, [user?.status, query.isError, query.error, navigate])
+
   const startPayment = useMutation({
     mutationFn: () => {
+      if (sandboxPreview) return Promise.reject(new Error('Le paiement est bloqué tant que la vérification réelle n’est pas approuvée.'))
       if (!phoneE164 || !selectedMethod) return Promise.reject(new Error('Numéro ou moyen de paiement invalide.'))
       return post<PaymentAttempt>('/me/membership/payments', { method: selectedMethod, payment_phone: phoneE164 }, newIdempotencyKey())
     },
@@ -92,7 +105,20 @@ export default function MembershipPage() {
       </Helmet>
 
       <div className="max-w-xl space-y-6">
-        <PageHeader title="Finalisez votre adhésion" description="Votre e-mail est vérifié. Réglez les frais d’adhésion pour activer votre compte et accéder aux packs." />
+        <PageHeader
+          title={sandboxPreview ? 'Adhésion — aperçu de test' : 'Finalisez votre adhésion'}
+          description={sandboxPreview
+            ? "Votre contrôle documentaire de test est terminé. Retrouvez ci-dessous le parcours habituel d’adhésion, sans paiement ni activation réelle."
+            : "Votre e-mail est vérifié. Réglez les frais d’adhésion pour activer votre compte et accéder aux packs."}
+        />
+        {sandboxPreview && (
+          <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+            <strong className="block mb-1">Parcours de démonstration uniquement</strong>
+            Le contrôle documentaire Sandbox ne valide pas réellement votre identité.
+            Vous pouvez consulter le montant et les moyens d’adhésion, mais aucun paiement,
+            débit Mobile Money ou accès aux YEM n’est autorisé.
+          </div>
+        )}
 
         {query.isPending && <div className="h-64 animate-pulse rounded-3xl bg-[var(--chart-track)]" />}
 
@@ -189,10 +215,10 @@ export default function MembershipPage() {
                 )}
                 <button
                   type="submit"
-                  disabled={startPayment.isPending || !phoneE164 || !selectedMethod}
+                  disabled={sandboxPreview || startPayment.isPending || !phoneE164 || !selectedMethod}
                   className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60"
                 >
-                  Continuer
+                  {sandboxPreview ? 'Paiement indisponible en mode test' : 'Continuer'}
                 </button>
               </form>
             )}
