@@ -38,6 +38,7 @@ export default function KycPage() {
   const [accepted, setAccepted] = useState(false)
   const [diditAccepted, setDiditAccepted] = useState(false)
   const [diditBusy, setDiditBusy] = useState(false)
+  const [embeddedSessionUrl, setEmbeddedSessionUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isCompany = user?.personType === 'legal'
 
@@ -89,13 +90,53 @@ export default function KycPage() {
       const result = await post<{ url: string; status: string }>('/me/kyc/didit/start', {
         privacy_notice_accepted: true,
       })
-      // The backend allow-lists Didit's official hosted verification domain.
-      window.location.assign(result.url)
+      // The CECT UI stays on its own domain. The provider iframe runs inside this authenticated page.
+      setEmbeddedSessionUrl(result.url)
+      setDiditBusy(false)
     } catch (err) {
       setError(toApiError(err).message)
       setDiditBusy(false)
     }
   }
+
+  useEffect(() => {
+    if (!embeddedSessionUrl) return
+    let disposed = false
+    let release: (() => void) | undefined
+    async function mountVerification() {
+      try {
+        const { DiditSdk } = await import('@didit-protocol/sdk-web')
+        if (disposed) return
+        release = () => DiditSdk.shared.close()
+        DiditSdk.shared.onComplete = (result) => {
+          // Never trust the browser result: only Laravel's authenticated decision may update a dossier.
+          if (result.type === 'completed') {
+            setEmbeddedSessionUrl(null)
+            void post('/me/kyc/didit/refresh', {})
+              .then(() => queryClient.invalidateQueries({ queryKey: ['member-kyc'] }))
+              .then(() => refresh())
+              .catch((err: unknown) => setError(toApiError(err).message))
+          }
+        }
+        DiditSdk.shared.onStateChange = (state) => {
+          if (state === 'error') setError('Le module de vérification ne peut pas s’ouvrir. Réessayez.')
+        }
+        DiditSdk.shared.startVerification({
+          url: embeddedSessionUrl!,
+          configuration: {
+            embedded: true,
+            embeddedContainerId: 'cect-verification-documentaire',
+            loggingEnabled: false,
+            showCloseButton: false,
+          },
+        })
+      } catch {
+        if (!disposed) setError('Impossible de charger le module sécurisé de vérification.')
+      }
+    }
+    void mountVerification()
+    return () => { disposed = true; release?.() }
+  }, [embeddedSessionUrl, queryClient, refresh])
 
   async function checkDidit() {
     setDiditBusy(true)
@@ -134,7 +175,7 @@ export default function KycPage() {
       <Helmet><title>Vérification d’identité — CECT</title></Helmet>
       <div className="max-w-2xl space-y-5">
         <PageHeader title="Vérification d'identité (KYC)"
-          description="Après la confirmation de votre e-mail, vérifiez votre identité avant de régler vos frais d’adhésion." />
+          description="Après la confirmation de votre e-mail, contrôlez votre pièce d'identité dans votre espace CECT avant l'adhésion." />
         <Panel title="Étape obligatoire avant l'adhésion">
           <div className="flex items-start gap-3 text-sm text-[var(--color-text-muted)]">
             <ShieldCheck className="shrink-0 text-[var(--color-primary)]" size={24} />
@@ -144,14 +185,14 @@ export default function KycPage() {
         </Panel>
 
         {state?.provider === 'didit' && (user?.status === 'pending_kyc' || user?.status === 'pending_payment') && status !== 'approved' && (
-          <Panel title={isCompany ? "Vérification de votre entreprise (KYB) avec Didit" : "Contrôle biométrique officiel avec Didit"}>
+          <Panel title={isCompany ? "Vérification d’entreprise CECT (KYB)" : "Contrôle documentaire CECT"}>
             <div className="space-y-4 text-sm">
               {state?.provider_environment === 'sandbox' && (
                 <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
                   <strong className="block mb-1">Mode test — vérification non officielle</strong>
-                  Didit est actuellement connecté en Sandbox. Ne transmettez pas de véritables
-                  documents d'identité ni de données biométriques pour cet essai.
-                  Un résultat simulé ne valide pas une identité et ne permet ni de payer
+                  Ce contrôle utilise un environnement de test. Utilisez exclusivement une
+                  pièce d'identité de démonstration, jamais une véritable carte personnelle.
+                  Le résultat reste simulé et ne permet ni de payer
                   l'adhésion ni d'accéder aux opérations YEM.
                 </div>
               )}
@@ -159,25 +200,36 @@ export default function KycPage() {
                 <ScanFace className="shrink-0 text-[var(--color-primary)]" size={24} />
                 <p>{isCompany
                   ? "Didit vous guidera dans la vérification du registre de votre société, de ses documents officiels et de ses bénéficiaires effectifs. Les dirigeants concernés effectueront leur propre contrôle d'identité."
-                  : "Didit vous guidera pour scanner votre pièce officielle, prendre un selfie en direct, réaliser une vérification vidéo de présence (liveness actif) et comparer votre visage à la photo du document. Votre caméra s'ouvre uniquement pendant la vérification sécurisée."}</p>
+                  : "Pour ce test, seule la carte d'identité est demandée (recto et verso si nécessaire). Prenez des photos nettes ou importez des images de démonstration. Aucun selfie ou contrôle vidéo n'est demandé."}</p>
               </div>
               <div className="flex gap-3 items-start">
                 <Video className="shrink-0 text-[var(--color-primary)]" size={24} />
-                <p>Préparez votre document, choisissez un endroit éclairé et autorisez l'accès à la caméra
-                  sur la page Didit. En cas de doute, un Validateur CECT examine les résultats.</p>
+                <p>{isCompany
+                  ? "Préparez les informations de votre entreprise. Les décisions restent désactivées en mode test."
+                  : "La capture s'effectue ici, dans l'espace CECT. Elle n'accorde aucun droit d'adhésion : le dossier restera en attente jusqu'à une véritable vérification."}</p>
               </div>
               <label className="flex items-start gap-3">
                 <input type="checkbox" className="mt-1" checked={diditAccepted}
                   onChange={e => setDiditAccepted(e.target.checked)} />
-                <span>J'ai lu la notice KYC. J'accepte de lancer le contrôle documentaire et biométrique
-                  chez Didit, prestataire tiers de CECT, et comprends que des données d'identité et de visage
-                  seront traitées selon la notice de confidentialité.</span>
+                <span>J'accepte de commencer ce contrôle documentaire de test. CECT fait appel à Didit
+                  comme prestataire technique pour le traitement sécurisé des pièces. Je comprends que
+                  les données utilisées à cette étape lui seront transmises et qu'aucune identité
+                  n'est officiellement validée en Sandbox.</span>
               </label>
               <button type="button" onClick={() => void startDidit()}
                 disabled={!diditAccepted || diditBusy}
                 className="min-h-11 w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-50">
-                {diditBusy ? 'Connexion à Didit…' : status === 'provider_pending' ? 'Reprendre la vérification Didit' : 'Commencer la vérification Didit'}
+                {diditBusy ? 'Ouverture du contrôle…' : status === 'provider_pending' ? 'Reprendre mon contrôle' : isCompany ? 'Démarrer le contrôle entreprise' : 'Photographier ma carte d’identité'}
               </button>
+              {embeddedSessionUrl && (
+                <section aria-label="Module intégré de vérification" className="rounded-xl border border-[var(--color-border)] overflow-hidden">
+                  <div className="flex items-center justify-between gap-3 px-4 py-3 bg-[var(--color-bg)]">
+                    <strong>Vérification documentaire CECT</strong>
+                    <button type="button" className="underline text-sm" onClick={() => setEmbeddedSessionUrl(null)}>Fermer</button>
+                  </div>
+                  <div id="cect-verification-documentaire" className="w-full bg-white" style={{ height: 'min(780px, 78vh)', minHeight: 510 }} />
+                </section>
+              )}
               {!!state.kyc && <button type="button" onClick={() => void checkDidit()} disabled={diditBusy}
                 className="min-h-11 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 font-semibold disabled:opacity-50">
                 Vérifier le résultat de mon contrôle
@@ -192,8 +244,8 @@ export default function KycPage() {
         {query.isError && <p role="alert">Impossible de consulter le dossier KYC. Actualisez la page.</p>}
 
         {status === 'submitted' && <Panel title="Dossier en vérification">
-          <p className="flex items-center gap-2 text-sm"><FileCheck2 size={20} /> Votre dossier a été reçu. Un Validateur va vérifier vos informations et vos justificatifs.</p>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">Vous pourrez payer les droits d'adhésion après approbation. Cette page se met à jour automatiquement.</p>
+          <p className="flex items-center gap-2 text-sm"><FileCheck2 size={20} /> Votre dossier de test a été reçu. La validation réelle reste désactivée tant que le contrôle d'identité complet n'est pas activé.</p>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">Vous ne pouvez pas payer après un contrôle Sandbox. Cette page se met à jour automatiquement.</p>
         </Panel>}
 
         {status === 'approved' && <Panel title="Identité validée">
