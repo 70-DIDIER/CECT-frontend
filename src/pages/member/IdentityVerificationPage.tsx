@@ -57,6 +57,13 @@ export default function IdentityVerificationPage() {
     cameraStream.current = null
   }, [])
 
+  useEffect(() => {
+    if (cameraActive && video.current && cameraStream.current) {
+      video.current.srcObject = cameraStream.current
+      void video.current.play().catch(() => setError('La caméra ne peut pas démarrer. Vérifiez ses autorisations.'))
+    }
+  }, [cameraActive])
+
   async function openCamera() {
     setError(null)
     if (!navigator.mediaDevices?.getUserMedia) {
