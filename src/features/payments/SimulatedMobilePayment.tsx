@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import type { CountryCode } from 'libphonenumber-js/min'
+import { CountrySelect } from '@/components/ui/CountrySelect'
+import { DEFAULT_COUNTRY, toInternationalPhone } from '@/lib/countries'
 import { CheckCircle2, Loader2, Smartphone } from 'lucide-react'
 import { formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
@@ -22,11 +25,12 @@ interface SimulatedMobilePaymentProps {
 }
 
 export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMethod }: SimulatedMobilePaymentProps) {
+  const [country, setCountry] = useState<CountryCode>(DEFAULT_COUNTRY)
   const [phone, setPhone] = useState('')
   const [step, setStep] = useState<Step>('phone')
   const [error, setError] = useState<string | null>(null)
 
-  const phoneValid = /^\d{8}$/.test(phone)
+  const phoneValid = toInternationalPhone(country, phone) !== null
 
   async function pay() {
     setError(null)
@@ -47,7 +51,7 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
         <Loader2 size={32} className="animate-spin text-[var(--color-primary)]" aria-hidden />
         <p className="text-sm font-semibold text-[var(--color-text)]">Confirmez le paiement sur votre téléphone</p>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Une demande de {formatXof(amount)} a été envoyée au +228 {phone} ({methodName(method)}).
+          Simulation de {formatXof(amount)} pour {toInternationalPhone(country, phone)} ({methodName(method)}).
         </p>
       </div>
     )
@@ -79,18 +83,18 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
           Numéro de téléphone
         </label>
         <div className="flex items-center gap-2">
-          <span className="rounded-xl border border-[var(--color-border)] px-3 py-2.5 text-sm text-[var(--color-text-muted)]">+228</span>
+          <CountrySelect value={country} onChange={(iso) => { setCountry(iso as CountryCode); setPhone('') }} className="shrink-0" />
           <input
             id="simulated-phone"
             value={phone}
-            onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 8))}
+            onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 15))}
             inputMode="numeric"
             placeholder="90123456"
             autoComplete="tel-national"
             className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
           />
         </div>
-        {phone.length > 0 && !phoneValid && <p className="mt-1 text-xs text-[var(--color-danger)]">Le numéro doit contenir 8 chiffres.</p>}
+        {phone.length > 0 && !phoneValid && <p className="mt-1 text-xs text-[var(--color-danger)]">Saisissez un numéro valide pour le pays sélectionné.</p>}
       </div>
       {error && (
         <p role="alert" className="text-sm text-[var(--color-danger)]">
