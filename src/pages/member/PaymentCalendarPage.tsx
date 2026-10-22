@@ -13,18 +13,35 @@ type PaymentState = 'paid' | 'pending' | 'canceled' | 'free'
 type PaymentFilter = 'all' | PaymentState
 type ViewMode = 'payments' | 'credits'
 
-interface MembershipRecord {
+interface MemberStatementRow {
   id: string
-  status: string
-  fee_amount: number
-  fee_currency: string
+  type: 'membership' | 'pack' | 'topup'
+  label: string
+  pack_id: string | null
+  family: string | null
+  contract_amount_xof: number
+  fee_amount_xof: number
+  total_amount_xof: number
+  status: PaymentState
+  payment_method: string | null
+  provider: string | null
+  provider_reference: string | null
+  created_at: string | null
   paid_at: string | null
-  activated_at: string | null
 }
-interface MembershipResponse {
-  status: string
-  membership: MembershipRecord | null
-  fee_due: number
+interface MemberStatement {
+  person_type: 'natural' | 'legal'
+  currency: 'XOF'
+  payment_mode: 'upfront_once'
+  installments_allowed: false
+  summary: {
+    confirmed_payments_count: number
+    pending_payments_count: number
+    confirmed_total_xof: number
+    confirmed_contract_total_xof: number
+    confirmed_fees_xof: number
+  }
+  payments: MemberStatementRow[]
 }
 interface PackPeriod {
   number: number
@@ -51,8 +68,13 @@ interface PaymentRow {
   category: string
   date: string | null
   amount: number
+  contractAmount: number
+  fee: number
   state: PaymentState
   packId?: string
+  provider?: string | null
+  method?: string | null
+  reference?: string | null
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -150,27 +172,30 @@ export default function PaymentCalendarPage() {
   const [view, setView] = useState<ViewMode>('payments')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const membership = useQuery({ queryKey: ['payment-calendar', 'membership'], queryFn: () => get<MembershipResponse>('/me/membership'), staleTime: 15_000 })
+  // Monetary truth comes from server-verified PaymentIntents, never from pack activation flags.
+  const statement = useQuery({ queryKey: ['payment-calendar', 'statement'], queryFn: () => get<MemberStatement>('/me/payment-statement'), staleTime: 15_000 })
   const packs = useQuery({ queryKey: ['payment-calendar', 'packs'], queryFn: () => get<UserPack[]>('/me/packs'), staleTime: 15_000 })
 
-  const rows: PaymentRow[] = []
-  if (membership.data?.membership) {
-    const item = membership.data.membership
-    rows.push({ id: item.id, label: 'Adhésion CECT', category: 'Cotisation initiale · paiement unique', amount: item.fee_amount, date: item.paid_at, state: item.paid_at ? 'paid' : item.fee_amount === 0 && item.activated_at ? 'free' : 'pending' })
-  }
-  for (const item of packs.data ?? []) {
-    rows.push({
-      id: item.id, packId: item.id, label: item.plan.name, category: 'Paiement intégral · ' + item.family,
-      amount: item.price_xof, date: item.paid_at ?? item.created_at ?? null, state: item.paid_at ? 'paid' : item.price_xof === 0 && item.status === 'active' ? 'free' : item.status === 'canceled' ? 'canceled' : 'pending',
-    })
-  }
+  const rows: PaymentRow[] = (statement.data?.payments ?? []).map((item) => ({
+    id: item.id,
+    label: item.label,
+    category: item.type === 'membership' ? 'Cotisation initiale · paiement unique' : item.type === 'topup' ? 'Rechargement ponctuel · paiement unique' : 'Souscription · paiement intégral · ' + (item.family ?? ''),
+    date: item.paid_at ?? item.created_at,
+    amount: item.total_amount_xof,
+    contractAmount: item.contract_amount_xof,
+    fee: item.fee_amount_xof,
+    state: item.status,
+    packId: item.type === 'pack' ? item.pack_id ?? undefined : undefined,
+    provider: item.provider,
+    method: item.payment_method,
+    reference: item.provider_reference,
+  }))
   const visible = rows.filter((row) => filter === 'all' || filter === row.state)
   const paid = rows.filter((row) => row.state === 'paid')
-  const pending = rows.filter((row) => row.state === 'pending')
-  const totalPaid = paid.reduce((sum, row) => sum + row.amount, 0)
+  const totalPaid = statement.data?.summary.confirmed_total_xof ?? 0
   const selectedPack = (packs.data ?? []).find((item) => item.id === expandedId)
   const legal = user?.personType === 'legal'
-  const unavailable = membership.isError || packs.isError
+  const unavailable = statement.isError || packs.isError
   return (
     <>
       <Helmet><title>Fiche des règlements — CECT Togo</title></Helmet>
@@ -191,8 +216,8 @@ export default function PaymentCalendarPage() {
         </div>
         <dl className="relative mt-7 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Paiements uniques confirmés</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{paid.length}</dd></div>
-          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Montant initial réglé (hors recharges et frais)</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{formatXof(totalPaid)}</dd></div>
-          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Règlements en attente</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{pending.length}</dd></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Montant confirmé, recharges et frais inclus</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{formatXof(totalPaid)}</dd></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Règlements en attente</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{statement.data?.summary.pending_payments_count ?? 0}</dd></div>
         </dl>
       </div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -204,21 +229,21 @@ export default function PaymentCalendarPage() {
           {([['all', 'Tous'], ['paid', 'Réglés'], ['pending', 'En attente'], ['canceled', 'Annulés'], ['free', 'Gratuits']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className={`min-h-9 rounded-full border px-3 text-xs font-semibold transition ${filter === value ? 'border-[var(--color-primary)] bg-emerald-500/10 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{label}</button>)}
         </div>}
       </div>
-      {unavailable && <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/30 p-5 text-sm text-[var(--color-text)]">Le suivi ne peut pas être chargé pour le moment.<button type="button" onClick={() => { void membership.refetch(); void packs.refetch() }} className="inline-flex items-center gap-2 font-bold text-rose-500"><RefreshCw size={15} aria-hidden /> Réessayer</button></div>}
-      {(membership.isPending || packs.isPending) && <div className="h-52 animate-pulse rounded-2xl bg-[var(--chart-track)]" aria-busy />}
-      {!unavailable && !membership.isPending && !packs.isPending && (
+      {unavailable && <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/30 p-5 text-sm text-[var(--color-text)]">Le suivi ne peut pas être chargé pour le moment.<button type="button" onClick={() => { void statement.refetch(); void packs.refetch() }} className="inline-flex items-center gap-2 font-bold text-rose-500"><RefreshCw size={15} aria-hidden /> Réessayer</button></div>}
+      {(statement.isPending || packs.isPending) && <div className="h-52 animate-pulse rounded-2xl bg-[var(--chart-track)]" aria-busy />}
+      {!unavailable && !statement.isPending && !packs.isPending && (
         <section className="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-[var(--dash-card)] shadow-[var(--shadow-card)]">
           {view === 'payments' ? (
             <>
-              <div className="border-b border-[var(--color-border)] px-6 py-5"><h2 className="text-base font-extrabold text-[var(--color-text)]">Historique de paiement</h2><p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">Un seul règlement pour chaque pack payant, sans mensualités. Prix contractuels hors frais de prestataire et hors rechargements.</p></div>
+              <div className="border-b border-[var(--color-border)] px-6 py-5"><h2 className="text-base font-extrabold text-[var(--color-text)]">Historique de paiement</h2><p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">Un seul paiement intégral par pack payant ; les frais de transaction et les rechargements sont détaillés séparément. Les paiements simulés ne correspondent pas à de vrais encaissements.</p></div>
               {visible.length === 0 ? <div className="px-6 py-14 text-center text-sm text-[var(--color-text-muted)]">Aucun règlement ne correspond à ce filtre.</div> : (
                 <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-sm">
                   <thead className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-muted)]"><tr><th scope="col" className="px-6 py-4">Opération</th><th scope="col" className="px-6 py-4">Date</th><th scope="col" className="px-6 py-4">Montant</th><th scope="col" className="px-6 py-4">Statut</th><th scope="col" className="px-6 py-4">Détails</th></tr></thead>
                   <tbody className="divide-y divide-[var(--color-border)]">
                     {visible.map((row) => <tr key={row.id} className="transition hover:bg-emerald-500/[.035]">
-                      <td className="px-6 py-4"><strong className="block text-[var(--color-text)]">{row.label}</strong><span className="mt-1 block text-xs text-[var(--color-text-muted)]">{row.category}</span></td>
+                      <td className="px-6 py-4"><strong className="block text-[var(--color-text)]">{row.label}</strong><span className="mt-1 block text-xs text-[var(--color-text-muted)]">{row.category}</span>{row.provider === 'fake' && <span className="mt-1 block text-xs font-bold text-amber-500">Simulation · aucun mouvement réel</span>}{row.reference && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">Réf. : {row.reference}</span>}</td>
                       <td className="px-6 py-4 text-[var(--color-text-muted)]">{displayDate(row.date)}</td>
-                      <td className="px-6 py-4 font-bold tabular-nums">{row.state === 'free' ? 'Gratuit' : formatXof(row.amount)}</td>
+                      <td className="px-6 py-4 tabular-nums"><strong className="block text-[var(--color-text)]">{row.state === 'free' ? 'Gratuit' : formatXof(row.amount)}</strong>{row.fee > 0 && <span className="mt-1 block text-xs text-[var(--color-text-muted)]">Dont frais : {formatXof(row.fee)}</span>}</td>
                       <td className="px-6 py-4"><StateTag state={row.state} /></td>
                       <td className="px-6 py-4">{row.packId ? <button type="button" aria-expanded={expandedId === row.packId} onClick={() => setExpandedId(expandedId === row.packId ? null : row.packId ?? null)} className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-bold text-[var(--color-primary)]">{expandedId === row.packId ? 'Masquer' : 'Afficher le calendrier'}{expandedId === row.packId ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}</button> : <span className="text-xs text-[var(--color-text-muted)]">Adhésion</span>}</td>
                     </tr>)}
