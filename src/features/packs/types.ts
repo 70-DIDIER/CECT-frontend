@@ -9,9 +9,10 @@ export interface PackVersion {
   period: { unit: string; every: number; cycles: number | null } | null
   quota_per_period: string | null
   total_quota: string | null
+  first_credit_delay_periods?: number | null
   cumulative: boolean | null
   eligible_person_types: string[]
-  rules: { discount_bps?: number; min_topup_xof?: number; reference_value_xof?: number; cashback?: { enabled: boolean; rate_bps: number; max_yem: string | null } }
+  rules: { first_credit_delay_periods?: number; discount_bps?: number; min_topup_xof?: number; reference_value_xof?: number; cashback?: { enabled: boolean; rate_bps: number; max_yem: string | null } }
 }
 
 export interface PackPlan {
@@ -61,8 +62,9 @@ export function termLabel(version: PackVersion): string | null {
   const period = version.period
   if (!period?.cycles) return null
   const [singular, plural] = UNIT_LABELS[period.unit] ?? [period.unit, period.unit]
-  const total = period.cycles * period.every
-  return `${total} ${total > 1 ? plural : singular}`
+  const delay = version.first_credit_delay_periods ?? version.rules.first_credit_delay_periods ?? 0
+  const total = (period.cycles + delay) * period.every
+  return `${total} ${total > 1 ? plural : singular} depuis l’activation${delay ? ` (dont ${delay * period.every} d’attente avant le 1er crédit)` : ''}`
 }
 
 export function periodLabel(version: PackVersion): string {
@@ -75,6 +77,11 @@ export function periodLabel(version: PackVersion): string {
 export function packFacts(version: PackVersion): { label: string; value: string }[] {
   const facts: { label: string; value: string }[] = [{ label: 'Prix', value: version.price_xof === 0 ? 'Gratuit' : formatXof(version.price_xof) }]
   if (version.quota_per_period) facts.push({ label: 'Quota', value: `${formatYem(version.quota_per_period)} ${periodLabel(version)}` })
+  if (version.period) {
+    const delay = version.first_credit_delay_periods ?? version.rules.first_credit_delay_periods ?? 0
+    facts.push({ label: 'Premier crédit YEM', value: delay === 0 ? 'Dès la confirmation du paiement intégral' : `Après ${delay} période${delay > 1 ? 's' : ''} complète${delay > 1 ? 's' : ''} à partir de l’activation` })
+    facts.push({ label: 'Crédits programmés', value: `${version.period.cycles} distributions YEM` })
+  }
   const term = termLabel(version)
   if (term) facts.push({ label: 'Durée', value: term })
   if (version.total_quota) facts.push({ label: 'Quota total', value: formatYem(version.total_quota) })
