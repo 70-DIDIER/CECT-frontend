@@ -13,11 +13,13 @@ interface MethodPickerProps {
   value: string
   onChange: (code: string) => void
   country?: string
+  demoCheckout?: boolean
 }
 
-export function MethodPicker({ value, onChange, country }: MethodPickerProps) {
+export function MethodPicker({ value, onChange, country, demoCheckout = false }: MethodPickerProps) {
   const { user } = useAuth()
   const methods = usePaymentMethods(country ?? fromInternationalPhone(user?.phone)?.country ?? 'TG')
+    .filter((method) => !demoCheckout || !['CASH', 'BANK_TRANSFER'].includes(method.code))
   return (
     <fieldset className="space-y-2">
       <legend className="mb-2 text-sm font-semibold text-[var(--color-text)]">Moyen de paiement</legend>
@@ -48,7 +50,9 @@ export function MethodPicker({ value, onChange, country }: MethodPickerProps) {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-[var(--color-text)]">{method.label}</span>
-            <span className="block text-xs text-[var(--color-text-muted)]">{method.hint}</span>
+            <span className="block text-xs text-[var(--color-text-muted)]">
+              {demoCheckout && method.hint.toLowerCase().includes('simul') ? 'Paiement mobile sécurisé' : method.hint}
+            </span>
           </span>
         </label>
       ))}
@@ -124,8 +128,8 @@ export function PaymentCheckout({ payment, onDeclare, onRefresh, onSimulate, onC
 
       {simulated && (
         <div className="space-y-3">
-          <p className="rounded-xl border border-[var(--color-primary)]/25 bg-[var(--color-primary)]/5 p-3 text-sm font-semibold text-[var(--color-text)]">
-            MODE TEST — Paiement simulé. Aucun débit réel et aucun SMS ne sera envoyé.
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Simulation de paiement : aucun débit ni SMS réel.
           </p>
           {payment.method === 'CARD_SIM' ? (
             <SimulatedCardPayment
