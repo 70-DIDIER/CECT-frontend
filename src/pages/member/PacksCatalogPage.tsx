@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { Link } from 'react-router-dom'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { BadgeCheck, CheckCircle2, Clock3, Boxes, ArrowRight, RefreshCw, X } from 'lucide-react'
+import { BadgeCheck, CheckCircle2, Clock3, CalendarDays, Boxes, ArrowRight, RefreshCw, X } from 'lucide-react'
 import { SegmentedControl } from '@/components/dashboard/SegmentedControl'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -411,6 +412,11 @@ export default function PacksCatalogPage() {
           />
         }
       />
+
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[var(--color-border)] bg-[var(--dash-card)] px-5 py-4">
+        <div className="flex items-center gap-3"><CalendarDays size={20} className="text-[var(--color-primary)]" aria-hidden /><div><p className="text-sm font-bold text-[var(--color-text)]">Calendrier des règlements et crédits</p><p className="text-xs text-[var(--color-text-muted)]">Retrouvez vos paiements et les dates de crédit de chaque formule.</p></div></div>
+        <Link to="/espace/calendrier" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white hover:bg-emerald-700">Ouvrir ma fiche <ArrowRight size={16} aria-hidden /></Link>
+      </div>
 
       {tab === 'mine' && (
         <div className="space-y-6">
