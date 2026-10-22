@@ -273,7 +273,7 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
   const pending = owned?.status === 'pending_payment'
   const isDemo = plan.code.startsWith('TST-')
   const locked = plan.eligible === false
-  const sellerLimitReached = plan.family === 'VENDEUR' && sellerSlotsUsed >= 2
+  const sellerLimitReached = plan.family === 'VENDEUR' && !isDemo && sellerSlotsUsed >= 2
   const cannotResubscribe = hasActive && plan.family === 'MARCHAND'
   const facts = packFacts(version).filter((fact) => fact.label !== 'Prix')
   const price = version.price_xof === 0 ? (plan.family === 'PERSONNEL' ? 'Ouverture gratuite' : 'Gratuit') : formatXof(version.price_xof)
@@ -303,6 +303,8 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
       <div className="mt-auto pt-5">
         {locked ? (
           <p className="text-sm text-[var(--color-text-muted)]">Ce pack n’est pas ouvert à votre type de compte.</p>
+        ) : isDemo && hasActive ? (
+          <Link to="/espace/vendre" className={`${btnPrimary} w-full justify-center`}>Continuer mes tests de vente</Link>
         ) : (
           <button type="button" disabled={sellerLimitReached || cannotResubscribe} onClick={hasActive && plan.family === 'PERSONNEL' ? onTopup : onSelect} className={`${btnPrimary} w-full`}>
             {sellerLimitReached ? 'Limite : 2 packs Vendeur' : hasActive ? (plan.family === 'PERSONNEL' ? 'Recharger' : plan.family === 'MARCHAND' ? 'Pack Marchand actif' : isDemo ? 'Reprendre un test de vente' : 'Souscrire à nouveau') : pending ? 'Reprendre le paiement' : isDemo ? 'Tester la souscription' : version.price_xof === 0 ? (plan.family === 'PERSONNEL' ? 'Ouvrir mon portefeuille YEM' : 'Activer gratuitement') : plan.payment_quote ? `Souscrire · ${formatXof(plan.payment_quote.total_amount)}` : 'Souscrire'}
@@ -416,7 +418,7 @@ export default function PacksCatalogPage() {
   }
 
   const myPacks = (mine.data ?? []).filter((pack) => pack.status === 'active' || pack.status === 'pending_payment')
-  const sellerSlotsUsed = myPacks.filter(pack => pack.family === 'VENDEUR').length
+  const sellerSlotsUsed = myPacks.filter(pack => pack.family === 'VENDEUR' && !pack.plan.code.startsWith('TST-')).length
   const planById = new Map((catalog.data ?? []).map((plan) => [plan.id, plan]))
   const filteredCatalog = (catalog.data ?? []).filter(plan => (familyFilter === 'TOUS' || plan.family === familyFilter) && (plan.name + ' ' + plan.description + ' ' + plan.code).toLocaleLowerCase('fr').includes(packSearch.trim().toLocaleLowerCase('fr')))
   const availableFilters = isLegal ? (['TOUS', 'MARCHAND'] as const) : (['TOUS', 'CONSOMMATEUR', 'PERSONNEL', 'VENDEUR'] as const)
