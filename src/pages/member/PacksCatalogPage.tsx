@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { Link } from 'react-router-dom'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { BadgeCheck, CheckCircle2, Clock3, X } from 'lucide-react'
@@ -10,7 +11,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { btnPrimary } from '@/components/ui/buttons'
 import { useMemberDashboard } from '@/data/useMemberDashboard'
 import type { MemberPack } from '@/data/memberDashboard'
-import { get, newIdempotencyKey, post } from '@/lib/api'
+import { ApiError, get, newIdempotencyKey, post } from '@/lib/api'
 import { formatBps, formatDateMedium, formatXof, formatYem } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { AmountBreakdown, MethodPicker, PaymentCheckout } from '@/features/payments/PaymentCheckout'
@@ -27,6 +28,7 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
   const [step, setStep] = useState<Step>({ name: 'method' })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [identityRequired, setIdentityRequired] = useState(false)
 
   const pendingPack = step.name === 'checkout' ? step.result.user_pack : null
   const status = useQuery({
@@ -48,6 +50,7 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
   async function subscribe() {
     setBusy(true)
     setError(null)
+    setIdentityRequired(false)
     try {
       const result = await post<SubscribeResult>('/me/packs', { plan_id: plan.id, ...(free ? {} : { method }) }, newIdempotencyKey())
       if (result.payment === null || result.user_pack.status === 'active') {
@@ -58,6 +61,7 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
         setStep({ name: 'checkout', result })
       }
     } catch (caught) {
+      setIdentityRequired(caught instanceof ApiError && caught.code === 'IDENTITY_VERIFICATION_REQUIRED')
       setError(authErrorMessage(caught))
     } finally {
       setBusy(false)
@@ -85,9 +89,10 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
               {plan.payment_quote && !free && <AmountBreakdown net={plan.payment_quote.net_amount} fee={plan.payment_quote.fee_amount} total={plan.payment_quote.total_amount} />}
               {free ? <p className="text-sm text-[var(--color-text-muted)]">Ce pack est gratuit : il sera activé immédiatement.</p> : <MethodPicker value={method} onChange={setMethod} />}
               {error && (
-                <p role="alert" className="text-sm text-[var(--color-danger)]">
-                  {error}
-                </p>
+                <div role="alert" className="space-y-2 text-sm text-[var(--color-danger)]">
+                  <p>{error}</p>
+                  {identityRequired && <Link to="/espace/verification-identite" onClick={onClose} className="inline-block font-semibold underline">Compléter ma vérification d’identité</Link>}
+                </div>
               )}
               <button
                 type="button"
@@ -105,7 +110,7 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
               method={step.result.payment.method ?? method}
               amount={step.result.payment.amount}
               onConfirmed={async () => {
-                await post(`/me/payments/${step.result.payment?.id}/demo-settle`)
+                await post(`/me/payments/${step.result.payment?.id}/simulate`)
                 await status.refetch()
               }}
               onChangeMethod={() => setStep({ name: 'method' })}
@@ -221,7 +226,7 @@ function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: numb
                   method={state.payment.method ?? method}
                   amount={state.payment.amount}
                   onConfirmed={async () => {
-                    await post(`/me/payments/${state.payment.id}/demo-settle`)
+                    await post(`/me/payments/${state.payment.id}/simulate`)
                     await topups.refetch()
                   }}
                   onChangeMethod={() => setState(null)}

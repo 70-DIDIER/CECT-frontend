@@ -100,7 +100,9 @@ export default function MembershipPage() {
                   method={method}
                   amount={state.payment_quote?.total_amount ?? state.fee_due}
                   onConfirmed={async () => {
-                    await post('/me/membership/demo-activation')
+                    // Staging must exercise the real membership intent and settlement lifecycle.
+                    const payment = await post<PaymentAttempt>('/me/membership/payments', { method }, newIdempotencyKey())
+                    await post(`/me/payments/${payment.id}/simulate`)
                     await query.refetch()
                   }}
                   onChangeMethod={() => setMethodChosen(false)}

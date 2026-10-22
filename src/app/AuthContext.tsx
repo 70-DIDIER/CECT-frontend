@@ -23,6 +23,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
+  phone: string | null
   pernum: string
   role: UserRole
   permissions: string[]
@@ -58,6 +59,7 @@ function toAuthUser(api: ApiUser): AuthUser {
     id: api.id,
     name: name || api.email,
     email: api.email,
+    phone: api.phone,
     pernum: api.pernum ?? api.member_number ?? '',
     role: primaryRole(api.kind, api.roles ?? []),
     permissions: api.permissions ?? [],

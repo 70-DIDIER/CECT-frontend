@@ -25,7 +25,10 @@ const SECTIONS: NavSection[] = [
   },
   {
     title: 'Compte',
-    items: [{ label: 'Profil et sécurité', icon: UserRound, to: '/espace/profil' }],
+    items: [
+      { label: 'Vérifier mon identité', icon: BadgeCheck, to: '/espace/verification-identite' },
+      { label: 'Profil et sécurité', icon: UserRound, to: '/espace/profil' },
+    ],
   },
 ]
 
@@ -39,6 +42,7 @@ const TITLES: Record<string, string> = {
   '/espace/vendre': 'Vendre mes YEM',
   '/espace/marchand': 'Espace marchand',
   '/espace/profil': 'Profil et sécurité',
+  '/espace/verification-identite': 'Vérification d’identité',
   '/espace/adhesion': 'Adhésion',
 }
 
