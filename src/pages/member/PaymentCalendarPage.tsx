@@ -87,6 +87,15 @@ function displayDate(value: string | null) {
   return Number.isNaN(date.getTime()) ? 'À confirmer' : DATE_FORMAT.format(date)
 }
 
+/** Exact six-decimal entitlement arithmetic: floating-point totals must never fabricate quota YEM. */
+function yemMicros(amount: string): bigint {
+  const [whole = '0', fraction = ''] = amount.split('.')
+  return BigInt(whole || '0') * 1000000n + BigInt((fraction + '000000').slice(0, 6))
+}
+function yemFromMicros(amount: bigint): string {
+  return `${amount / 1000000n}.${String(amount % 1000000n).padStart(6, '0')}`
+}
+
 function StateTag({ state }: { state: PaymentState }) {
   const label = state === 'paid' ? 'Réglé' : state === 'canceled' ? 'Annulé' : state === 'free' ? 'Gratuit' : 'En attente'
   const palette = state === 'paid'
@@ -111,14 +120,16 @@ function PackSchedule({ id }: { id: string }) {
     staleTime: 15_000,
   })
   const periods = detail.data?.periods ?? []
-  const rightsTotal = periods.reduce((sum, period) => sum + Number(period.quota), 0)
-  const unlocked = periods.filter(period => period.credited).reduce((sum, period) => sum + Number(period.quota), 0)
+  const rightsTotalMicros = periods.reduce((sum, period) => sum + yemMicros(period.quota), 0n)
+  const unlockedMicros = periods.filter(period => period.credited).reduce((sum, period) => sum + yemMicros(period.quota), 0n)
+  const rightsTotal = yemFromMicros(rightsTotalMicros)
+  const unlocked = yemFromMicros(unlockedMicros)
   const available = detail.data?.balance?.available ?? '0'
   const reserved = detail.data?.balance?.reserved ?? '0'
   const consumed = detail.data?.balance?.consumed ?? '0'
-  const remaining = Math.max(0, rightsTotal - unlocked)
+  const remaining = yemFromMicros(rightsTotalMicros - unlockedMicros)
   const nextPeriod = periods.find(period => !period.credited)
-  const progress = rightsTotal > 0 ? Math.min(100, Math.max(0, 100 * unlocked / rightsTotal)) : 0
+  const progress = rightsTotalMicros > 0n ? Math.min(100, Math.max(0, 100 * Number(unlockedMicros) / Number(rightsTotalMicros))) : 0
   const familyLabel = isSeller ? 'Vendeur' : isMerchant ? 'Marchand' : isPersonal ? 'Personnel' : 'Consommateur'
   const title = isSeller ? 'Vos autorisations de vente à la CECT' : isMerchant ? 'Vos plafonds de rééchange Marchand' : isPersonal ? 'Vos achats et rechargements de YEM' : 'Vos distributions de YEM'
   const explanation = isSeller
@@ -129,7 +140,7 @@ function PackSchedule({ id }: { id: string }) {
         ? 'Aucune période, aucun calendrier : vous achetez des YEM quand vous le souhaitez. Le solde est crédité après confirmation de chaque achat.'
         : 'Le pack est payé intégralement à la souscription. Les YEM du consommateur sont ensuite débloqués selon la fréquence configurée par le Superadmin.'
   const metrics = isSeller ? [
-    { label: 'Autorisé sur le contrat', value: String(rightsTotal), note: 'Total des droits sur toutes les périodes', icon: HandCoins },
+    { label: 'Autorisé sur le contrat', value: rightsTotal, note: 'Total des droits sur toutes les périodes', icon: HandCoins },
     { label: 'Disponible à vendre', value: available, note: 'Quota déjà ouvert et non engagé', icon: Wallet2 },
     { label: 'Réservé', value: reserved, note: 'Ventes en cours de traitement', icon: LockKeyhole },
     { label: 'Déjà cédé', value: consumed, note: 'Ventes validées et décomptées', icon: CheckCircle2 },
@@ -166,7 +177,7 @@ function PackSchedule({ id }: { id: string }) {
           </div>
           <dl className="mt-5 grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
             <div><dt className="text-xs text-[var(--color-text-muted)]">Activation</dt><dd className="mt-1 font-bold">{displayDate(detail.data.activated_at)}</dd></div>
-            <div><dt className="text-xs text-[var(--color-text-muted)]">Souscription payée</dt><dd className="mt-1 font-bold tabular-nums">{formatXof(detail.data.price_xof)}</dd></div>
+            <div><dt className="text-xs text-[var(--color-text-muted)]">Prix de souscription</dt><dd className="mt-1 font-bold tabular-nums">{formatXof(detail.data.price_xof)}</dd></div>
             <div><dt className="text-xs text-[var(--color-text-muted)]">Fin du contrat</dt><dd className="mt-1 font-bold">{isPersonal ? 'Sans échéance' : displayDate(detail.data.expires_at)}</dd></div>
             <div><dt className="text-xs text-[var(--color-text-muted)]">Statut</dt><dd className="mt-1 font-bold">{detail.data.status === 'active' ? 'Actif' : detail.data.status === 'pending_payment' ? 'Paiement en attente' : detail.data.status === 'expired' ? 'Terminé' : detail.data.status}</dd></div>
           </dl>
@@ -177,9 +188,9 @@ function PackSchedule({ id }: { id: string }) {
             {metrics.map(({label,value,note,icon:Icon}) => <div key={label} title={note} className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-3 sm:p-4"><dt className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-text-muted)]"><Icon size={14} aria-hidden />{label}</dt><dd className="mt-2 text-lg font-extrabold tabular-nums text-[var(--color-text)] sm:text-xl">{formatYem(value)}<span className="ml-1 text-[10px] font-semibold text-[var(--color-text-muted)]">YEM</span></dd><p className="mt-1 text-[11px] leading-4 text-[var(--color-text-muted)]">{note}</p></div>)}
           </div>
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-extrabold text-[var(--color-text)]">{isSeller ? 'Déblocage des droits de vente' : isMerchant ? 'Ouverture des plafonds' : 'Déblocage des crédits YEM'}</p><p className="mt-1 text-xs text-[var(--color-text-muted)]">{periods.filter(period => period.credited).length} / {periods.length} périodes ouvertes</p></div><strong className="text-sm tabular-nums text-[var(--color-primary)]">{formatYem(String(unlocked))} / {formatYem(String(rightsTotal))} YEM</strong></div>
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-extrabold text-[var(--color-text)]">{isSeller ? 'Déblocage des droits de vente' : isMerchant ? 'Ouverture des plafonds' : 'Déblocage des crédits YEM'}</p><p className="mt-1 text-xs text-[var(--color-text-muted)]">{periods.filter(period => period.credited).length} / {periods.length} périodes ouvertes</p></div><strong className="text-sm tabular-nums text-[var(--color-primary)]">{formatYem(unlocked)} / {formatYem(rightsTotal)} YEM</strong></div>
             <div role="progressbar" aria-label="Droits périodiques ouverts" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} className="mt-3 h-2.5 overflow-hidden rounded-full bg-[var(--chart-track)]"><div className="h-full rounded-full bg-emerald-500" style={{width:`${progress}%`}} /></div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]"><span>{formatYem(String(remaining))} YEM contractuels à ouvrir</span>{nextPeriod && <span className="inline-flex items-center gap-1.5 font-bold text-[var(--color-primary)]"><Timer size={14} aria-hidden />Prochaine ouverture : {displayDate(nextPeriod.starts_at)}</span>}</div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]"><span>{formatYem(remaining)} YEM contractuels à ouvrir</span>{nextPeriod && <span className="inline-flex items-center gap-1.5 font-bold text-[var(--color-primary)]"><Timer size={14} aria-hidden />Prochaine ouverture : {displayDate(nextPeriod.starts_at)}</span>}</div>
             {isSeller && <p className="mt-3 border-t border-[var(--color-border)] pt-3 text-xs leading-5 text-[var(--color-text-muted)]">Important : « ouvert » signifie <strong>autorisé à la vente</strong> et non « versé ». Les YEM à céder proviennent de votre propre portefeuille. Le versement FCFA intervient seulement après la transaction et sa validation.</p>}
           </div>
           <div>
@@ -253,7 +264,7 @@ export default function PaymentCalendarPage() {
         <div aria-hidden className="pointer-events-none absolute -right-12 -top-20 h-60 w-60 rounded-full bg-[#caff2e]/[.11] blur-3xl" />
         <div className="relative flex flex-wrap items-start justify-between gap-6">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-[#caff2e]"><ReceiptText size={14} aria-hidden /> Fiche financière personnelle</span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-[#caff2e]"><ReceiptText size={14} aria-hidden /> {legal ? 'Fiche financière de la structure' : 'Fiche financière personnelle'}</span>
             <h2 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">{legal ? 'Suivi des règlements de votre entreprise' : 'Votre historique de règlements'}</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Chaque pack payant se règle à la souscription. Vendeur : quotas pour céder vos YEM. Consommateur : crédits YEM utilisables. Marchand : plafonds de rééchange. Personnel : achats libres sans échéancier.</p>
           </div>
