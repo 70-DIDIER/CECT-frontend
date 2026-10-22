@@ -83,6 +83,7 @@ export default function ProfilePage() {
           ) : (
             <div className="h-40 animate-pulse rounded-xl bg-[var(--chart-track)]" />
           )}
+          <Link to="/espace/verification-identite" className={`${btnOutline} mt-4`}>Vérifier mon identité</Link>
         </Panel>
 
         <div className="space-y-6">
