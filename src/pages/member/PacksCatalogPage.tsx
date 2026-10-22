@@ -373,9 +373,10 @@ export default function PacksCatalogPage() {
   const [tab, setTab] = useState<Tab>('mine')
   const [selected, setSelected] = useState<PackPlan | null>(null)
   const [topupFor, setTopupFor] = useState<{ pack: UserPack; minimum: number } | null>(null)
-  const catalog = useQuery({ queryKey: ['packs-catalog'], queryFn: () => get<PackPlan[]>('/packs'), staleTime: 0 })
+  const catalog = useQuery({ queryKey: ['packs-catalog'], queryFn: () => get<PackPlan[]>('/me/catalog-packs'), staleTime: 0 })
   const mine = useQuery({ queryKey: ['my-packs'], queryFn: () => get<UserPack[]>('/me/packs'), staleTime: 0 })
   const dashboard = useMemberDashboard()
+  const isLegal = dashboard.data?.profile.kind === 'legal'
 
   const ownedByPlan = new Map<string, UserPack>()
   for (const pack of mine.data ?? []) {
@@ -447,13 +448,19 @@ export default function PacksCatalogPage() {
 
       {tab === 'catalog' && (
         <div className="space-y-10">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-5">
-            <div>
-              <p className="font-bold">Vos packs Vendeur : {sellerSlotsUsed} sur 2</p>
-              <p className="mt-1 text-sm text-[var(--color-text-muted)]">Vous pouvez prendre deux formules Vendeur, identiques ou différentes. Les packs Consommateur ne comptent pas dans cette limite ; Personnel se recharge.</p>
+          {isLegal ? (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-5">
+              <div><p className="font-bold text-[var(--color-text)]">Catalogue Personne morale · Marchand uniquement</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--color-text-muted)]">Votre entreprise accède uniquement aux formules Marchand publiées par la CECT. Les packs Vendeur, Consommateur et Personnel sont réservés aux personnes physiques.</p>
+              </div><span className="rounded-xl bg-violet-500/10 px-4 py-2 text-xs font-bold text-violet-500">Espace PM</span>
             </div>
-            <span className="rounded-xl bg-emerald-700/10 px-4 py-2 text-sm font-bold text-[var(--color-primary)]">{Math.max(0, 2 - sellerSlotsUsed)} place(s) Vendeur</span>
-          </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-5">
+              <div><p className="font-bold text-[var(--color-text)]">Vos packs Vendeur : {sellerSlotsUsed} sur 2</p>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">Deux formules Vendeur maximum, identiques ou différentes. Consommateur ne compte pas dans cette limite ; Personnel se recharge. Marchand est réservé aux entreprises.</p>
+              </div><span className="rounded-xl bg-emerald-700/10 px-4 py-2 text-sm font-bold text-[var(--color-primary)]">{Math.max(0, 2 - sellerSlotsUsed)} place(s) Vendeur</span>
+            </div>
+          )}
           {catalog.isPending && <div className="h-48 animate-pulse rounded-[18px] bg-[var(--chart-track)]" />}
           {catalog.isError && (
             <p role="alert" className="rounded-[18px] border border-[var(--color-border)] bg-[var(--dash-card)] p-6 text-sm">
