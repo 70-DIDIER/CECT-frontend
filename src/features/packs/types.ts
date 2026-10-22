@@ -33,6 +33,7 @@ export interface UserPack {
   price_xof: number
   balance: { available: string; reserved: string; consumed: string } | null
   activated_at: string | null
+  paid_at?: string | null
   expires_at: string | null
 }
 
