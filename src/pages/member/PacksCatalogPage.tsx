@@ -16,6 +16,7 @@ import { authErrorMessage } from '@/features/auth/errors'
 import { AmountBreakdown, MethodPicker, PaymentCheckout } from '@/features/payments/PaymentCheckout'
 import { type PaymentAttempt } from '@/features/payments/types'
 import { FAMILIES, packFacts, type PackPlan, type SubscribeResult, type UserPack } from '@/features/packs/types'
+import { usePublicConfig } from '@/features/config/usePublicConfig'
 
 type Step = { name: 'method' } | { name: 'checkout'; result: SubscribeResult } | { name: 'done'; pack: UserPack }
 
@@ -144,6 +145,9 @@ interface Topup {
 function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: number; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [amount, setAmount] = useState(String(minimum || ''))
+  const publicConfig = usePublicConfig().data
+  const saleRate = publicConfig?.rates_xof_per_yem.sale
+  const estimatedYem = saleRate && Number.isFinite(Number(amount)) ? Math.max(0, Number(amount) / saleRate) : null
   const [method, setMethod] = useState('TMONEY')
   const [state, setState] = useState<{ topup: Topup; payment: PaymentAttempt } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -188,7 +192,7 @@ function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: numb
         <Dialog.Overlay className="fixed inset-0 z-50 bg-[var(--forest-900)]/60" />
         <Dialog.Content aria-describedby={undefined} className="fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl bg-[var(--dash-card)] p-6 shadow-2xl outline-none">
           <div className="mb-4 flex items-start justify-between gap-3">
-            <Dialog.Title className="text-lg font-extrabold tracking-tight text-[var(--color-text)]">Recharger {pack.plan.name}</Dialog.Title>
+            <Dialog.Title className="text-lg font-extrabold tracking-tight text-[var(--color-text)]">Acheter des YEM · {pack.plan.name}</Dialog.Title>
             <Dialog.Close aria-label="Fermer" className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--color-text-muted)] hover:bg-[var(--chart-track)]">
               <X size={18} aria-hidden />
             </Dialog.Close>
@@ -238,7 +242,12 @@ function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: numb
                   required
                   className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 />
-                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Minimum : {formatXof(minimum)}. La quantité de YEM est calculée au cours du jour.</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Minimum : {formatXof(minimum)}. Sans calendrier ni mensualité : achetez à votre rythme.</p>
+                <div className="mt-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/[.06] p-4">
+                  <p className="text-xs font-semibold text-[var(--color-text-muted)]">YEM estimés pour ce paiement</p>
+                  <p className="mt-1 text-2xl font-extrabold text-[var(--color-primary)]">{estimatedYem === null ? 'Cours indisponible' : `${formatYem(String(estimatedYem))} YEM`}</p>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">{saleRate ? `${formatXof(saleRate)} / YEM` : 'Cours non disponible'} · hors frais et bonus éventuel. La quantité définitive est confirmée par le backend.</p>
+                </div>
               </div>
               <MethodPicker value={method} onChange={setMethod} />
               {error && (
@@ -266,7 +275,7 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
   const sellerLimitReached = plan.family === 'VENDEUR' && sellerSlotsUsed >= 2
   const cannotResubscribe = hasActive && plan.family === 'MARCHAND'
   const facts = packFacts(version).filter((fact) => fact.label !== 'Prix')
-  const price = version.price_xof === 0 ? 'Gratuit' : formatXof(version.price_xof)
+  const price = version.price_xof === 0 ? (plan.family === 'PERSONNEL' ? 'Ouverture gratuite' : 'Gratuit') : formatXof(version.price_xof)
 
   return (
     <article className="flex flex-col rounded-[18px] border border-[var(--color-border)] bg-[var(--dash-card)] p-6">
@@ -293,7 +302,7 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
           <p className="text-sm text-[var(--color-text-muted)]">Ce pack n’est pas ouvert à votre type de compte.</p>
         ) : (
           <button type="button" disabled={sellerLimitReached || cannotResubscribe} onClick={hasActive && plan.family === 'PERSONNEL' ? onTopup : onSelect} className={`${btnPrimary} w-full`}>
-            {sellerLimitReached ? 'Limite : 2 packs Vendeur' : hasActive ? (plan.family === 'PERSONNEL' ? 'Recharger' : plan.family === 'MARCHAND' ? 'Pack Marchand actif' : 'Souscrire à nouveau') : pending ? 'Reprendre le paiement' : version.price_xof === 0 ? 'Activer gratuitement' : plan.payment_quote ? `Souscrire · ${formatXof(plan.payment_quote.total_amount)}` : 'Souscrire'}
+            {sellerLimitReached ? 'Limite : 2 packs Vendeur' : hasActive ? (plan.family === 'PERSONNEL' ? 'Recharger' : plan.family === 'MARCHAND' ? 'Pack Marchand actif' : 'Souscrire à nouveau') : pending ? 'Reprendre le paiement' : version.price_xof === 0 ? (plan.family === 'PERSONNEL' ? 'Ouvrir mon portefeuille YEM' : 'Activer gratuitement') : plan.payment_quote ? `Souscrire · ${formatXof(plan.payment_quote.total_amount)}` : 'Souscrire'}
           </button>
         )}
       </div>
@@ -372,6 +381,7 @@ function MyPackCard({ pack, detail, plan, onResume, onTopup }: { pack: UserPack;
             {pack.family === 'VENDEUR' && <Link to="/espace/vendre" className={`${btnPrimary} min-h-11 flex-1 justify-center text-xs`}><HandCoins size={16} aria-hidden />Vendre des YEM</Link>}
             {pack.family === 'CONSOMMATEUR' && <Link to="/espace/payer" className={`${btnPrimary} min-h-11 flex-1 justify-center text-xs`}><ShoppingBag size={16} aria-hidden />Payer un marchand</Link>}
             {personal && <button type="button" onClick={onTopup} className={`${btnPrimary} min-h-11 flex-1 justify-center text-xs`}><Coins size={16} aria-hidden />Acheter des YEM</button>}
+            {personal && <Link to="/espace/payer" className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] px-3 text-xs font-bold text-[var(--color-text)] hover:border-[var(--color-primary)]"><ShoppingBag size={16} aria-hidden />Utiliser mes YEM</Link>}
             {pack.family === 'MARCHAND' && <Link to="/espace/marchand" className={`${btnPrimary} min-h-11 flex-1 justify-center text-xs`}><ShieldCheck size={16} aria-hidden />Espace Marchand</Link>}
           </div>
         </>}
