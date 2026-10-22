@@ -45,8 +45,8 @@ export interface SubscribeResult {
 }
 
 export const FAMILIES: ReadonlyArray<{ family: PackFamily; title: string; summary: string }> = [
-  { family: 'CONSOMMATEUR', title: 'Consommateur', summary: 'Un quota de YEM crédité chaque mois pour payer chez les marchands du réseau.' },
-  { family: 'PERSONNEL', title: 'Personnel', summary: 'Un solde que vous rechargez à la demande, avec des YEM bonus selon les conditions de votre formule.' },
+  { family: 'CONSOMMATEUR', title: 'Consommateur', summary: 'YEM débloqués à la fréquence fixée par votre formule, pour vos achats chez les marchands partenaires.' },
+  { family: 'PERSONNEL', title: 'Personnel', summary: 'Achetez des YEM quand vous le souhaitez, utilisez-les librement dans les usages permis par CECT : aucun cycle, aucune échéance.' },
   { family: 'VENDEUR', title: 'Vendeur', summary: 'Vendez vos YEM à la CECT et recevez le montant en FCFA sur votre moyen de réception.' },
   { family: 'MARCHAND', title: 'Marchand', summary: 'Pour les personnes morales : encaissez des YEM auprès de vos clients et faites-les racheter par la CECT.' },
 ]
