@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileCheck2, ShieldCheck, UploadCloud, ScanFace, Video } from 'lucide-react'
+import { FileCheck2, ShieldCheck, UploadCloud, ScanFace, Video, FileClock, Info, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { ensureCsrfCookie, get, http, post, toApiError } from '@/lib/api'
 import { Panel } from '@/components/dashboard/Panel'
@@ -13,6 +13,7 @@ interface CaseState {
   provider: 'manual' | 'didit'
   provider_environment?: 'sandbox' | 'live' | null
   provider_document_only_test?: boolean
+  sandbox_test_completed?: boolean
   kyc: {
     id: string
     status: 'provider_pending' | 'submitted' | 'approved' | 'rejected' | 'needs_information'
@@ -40,6 +41,7 @@ export default function KycPage() {
   const [diditAccepted, setDiditAccepted] = useState(false)
   const [diditBusy, setDiditBusy] = useState(false)
   const [embeddedSessionUrl, setEmbeddedSessionUrl] = useState<string | null>(null)
+  const [verificationSent, setVerificationSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isCompany = user?.personType === 'legal'
 
@@ -114,6 +116,7 @@ export default function KycPage() {
         DiditSdk.shared.onComplete = (result) => {
           // Never trust the browser result: only Laravel's authenticated decision may update a dossier.
           if (result.type === 'completed') {
+            setVerificationSent(true)
             setEmbeddedSessionUrl(null)
             void post('/me/kyc/didit/refresh', {})
               .then(() => queryClient.invalidateQueries({ queryKey: ['member-kyc'] }))
@@ -159,6 +162,45 @@ export default function KycPage() {
     event.preventDefault()
     setError(null)
     send.mutate()
+  }
+
+  // After a document has been submitted, show ONLY the status card.
+  // Never re-display the upload form, scenario controls or embedded verification.
+  if (state?.provider === 'didit' && (status === 'submitted' || verificationSent)) {
+    const sandboxComplete = state.sandbox_test_completed === true
+    return (
+      <>
+        <Helmet><title>Suivi de votre dossier d’identité — CECT</title></Helmet>
+        <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-6 shadow-[var(--shadow-card)] sm:p-8">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10">
+              {sandboxComplete
+                ? <CheckCircle2 size={40} className="text-emerald-400" aria-hidden />
+                : <FileClock size={40} className="text-emerald-400" aria-hidden />}
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-text)]">
+              {sandboxComplete ? 'Contrôle documentaire terminé (test)' : 'Dossier en vérification'}
+            </h1>
+            <p className="max-w-lg text-[var(--color-text-muted)]">
+              {sandboxComplete
+                ? "Le scénario documentaire de test est terminé. Il ne constitue pas une validation d’identité réelle."
+                : "Votre dossier a été reçu et est en cours de vérification. Vous serez informé après examen."}
+            </p>
+          </div>
+          <div className="mt-8 border-t border-[var(--color-border)] pt-6">
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+              <Info size={20} className="mt-0.5 shrink-0 text-[var(--color-text-muted)]" aria-hidden />
+              <div className="text-sm">
+                <p className="font-bold">Vous ne pouvez pas payer pour le moment.</p>
+                <p className="mt-1 text-[var(--color-text-muted)]">
+                  Le paiement sera disponible uniquement après une véritable validation de votre identité.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    )
   }
 
   const field = 'min-h-[44px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-sm'
