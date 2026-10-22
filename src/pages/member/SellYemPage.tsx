@@ -1,18 +1,20 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Building2, Smartphone, CreditCard } from 'lucide-react'
+import { Pencil, Building2, Smartphone, CreditCard, Coins, Wallet, Clock3, CheckCircle2, ArrowRight, Calculator } from 'lucide-react'
 import { Panel } from '@/components/dashboard/Panel'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Steps } from '@/components/ui/Steps'
 import { FormDialog } from '@/components/ui/FormDialog'
 import { ApiError, get, getRaw, newIdempotencyKey, post, put } from '@/lib/api'
 import { ExchangeCard, type Exchange } from '@/features/exchanges/ExchangeCard'
-import { formatYem } from '@/lib/format'
+import { formatYem, formatXof } from '@/lib/format'
 import { authErrorMessage } from '@/features/auth/errors'
 import { methodName, usePaymentMethods } from '@/features/payments/types'
 import { usePublicConfig } from '@/features/config/usePublicConfig'
 import type { UserPack } from '@/features/packs/types'
+import { useMemberDashboard } from '@/data/useMemberDashboard'
+import { Link } from 'react-router-dom'
 
 interface PayoutDestination {
   method: string
@@ -36,6 +38,7 @@ export default function SellYemPage() {
   const [editingDestination, setEditingDestination] = useState(false)
   const [payoutCountry, setPayoutCountry] = useState('TG')
   const publicConfig = usePublicConfig().data
+  const dashboard = useMemberDashboard().data
   const methods = usePaymentMethods(payoutCountry).filter(method => method.code !== 'CARD_SIM')
   const canBank = publicConfig?.payment_methods.some(method => method.code === 'BANK_TRANSFER' && method.channel === 'manual') ?? false
   const payoutChoices = [...methods.map(method => ({ value: method.code, label: method.label })), ...(canBank ? [{ value: 'BANK_TRANSFER', label: 'Virement bancaire' }] : [])]
@@ -67,6 +70,12 @@ export default function SellYemPage() {
   const sellable = (packs.data ?? []).filter((pack) => pack.status === 'active' && pack.family === 'VENDEUR')
   const selectedPackId = packId || sellable[0]?.id || ''
   const selected = sellable.find((pack) => pack.id === selectedPackId)
+  const ledger = dashboard?.packs.find(pack => pack.id === selectedPackId)
+  const sellRate = publicConfig?.rates_xof_per_yem.purchase
+  const parsed = Number(quantity.replace(',', '.'))
+  const calculated = Number.isFinite(parsed) && parsed > 0 && sellRate ? Math.floor(parsed * sellRate) : 0
+  const hasBalance = Number(selected?.balance?.available ?? 0) > 0
+  const validAmount = QUANTITY_PATTERN.test(quantity.trim()) && parsed > 0 && parsed <= Number(selected?.balance?.available ?? 0)
 
   async function refreshAll() {
     await queryClient.invalidateQueries({ queryKey: ['exchanges'] })
@@ -102,7 +111,20 @@ export default function SellYemPage() {
       </Helmet>
 
       <div className="max-w-3xl space-y-6">
-        <PageHeader title="Vendre mes YEM" description="Réservez une quantité, envoyez-la à la CECT depuis votre portefeuille YEM, puis recevez le montant en FCFA." />
+        <PageHeader title="Vendre mes YEM" description="Sélectionnez votre pack Vendeur, indiquez vos YEM débloqués et suivez le transfert jusqu’au versement en FCFA." />
+        <section className="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-[var(--dash-card)] p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-extrabold uppercase tracking-[.16em] text-[var(--color-primary)]">Votre capacité de vente</p><h2 className="mt-1 text-lg font-extrabold">{selected?.plan.name ?? 'Choisissez votre pack Vendeur'}</h2></div><Wallet size={26} className="text-[var(--color-primary)]" aria-hidden /></div>
+          {selected ? <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { title: 'Crédité (contrat)', value: ledger?.contractual_total ?? ledger?.credited ?? '0', icon: Coins },
+              { title: 'Disponible', value: selected.balance?.available ?? '0', icon: Wallet },
+              { title: 'Réservé', value: selected.balance?.reserved ?? '0', icon: Clock3 },
+              { title: 'Déjà vendu', value: selected.balance?.consumed ?? '0', icon: CheckCircle2 },
+            ].map(({title,value,icon:Icon}) => <div key={title} className="min-w-0 rounded-xl bg-[var(--dash-bg)] p-3"><p className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)]"><Icon size={13} aria-hidden />{title}</p><strong className="mt-2 block text-base font-extrabold tabular-nums">{formatYem(value)} <span className="text-[10px] font-semibold text-[var(--color-text-muted)]">YEM</span></strong></div>)}
+          </div> : <p className="mt-4 text-sm text-[var(--color-text-muted)]">Vous devez d’abord souscrire une formule Vendeur.</p>}
+          <p className="mt-3 text-xs leading-5 text-[var(--color-text-muted)]">Le crédit contractuel correspond aux droits prévus pour la durée du pack. Vous ne pouvez vendre que les YEM effectivement débloqués et disponibles.</p>
+          {!hasBalance && <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/[.08] p-3 text-xs leading-5 text-[var(--color-text)]">Aucun YEM disponible pour une nouvelle vente. Les crédits sont débloqués aux dates de votre calendrier. <Link to="/espace/calendrier" className="font-bold text-[var(--color-primary)] underline">Voir mes prochains crédits</Link>.</p>}
+        </section>
 
         <Steps steps={['Réception', 'Quantité', 'Envoi des YEM', 'Versement']} current={step} />
 
@@ -140,15 +162,20 @@ export default function SellYemPage() {
                   Quantité de YEM à vendre
                 </label>
                 <input id="sell-quantity" value={quantity} onChange={(event) => setQuantity(event.target.value)} inputMode="decimal" required className={INPUT} />
-                {selected?.balance && <p className="mt-1 text-xs text-[var(--color-text-muted)]">Disponible : {formatYem(selected.balance.available)}</p>}
+                {selected?.balance && <p className="mt-1 text-xs text-[var(--color-text-muted)]">Disponible à vendre : {formatYem(selected.balance.available)} YEM</p>}
+                <div className="mt-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[.055] p-4">
+                  <p className="flex items-center gap-2 text-xs font-bold text-[var(--color-primary)]"><Calculator size={16} aria-hidden />Simulation du montant à recevoir</p>
+                  <div className="mt-3 flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs text-[var(--color-text-muted)]">Cours de rachat actuel</p><p className="mt-1 text-sm font-bold">{sellRate ? `${formatXof(sellRate)} par YEM` : 'Cours indisponible'}</p></div><div className="text-right"><p className="text-xs text-[var(--color-text-muted)]">Estimation brute</p><p className="mt-1 text-xl font-extrabold text-[var(--color-primary)] tabular-nums">{sellRate ? formatXof(calculated) : '—'}</p></div></div>
+                  <p className="mt-2 text-[11px] leading-5 text-[var(--color-text-muted)]">Le versement définitif et les éventuels frais sont confirmés par la CECT lors de la transaction. Cette estimation n’est pas un paiement.</p>
+                </div>
               </div>
               {error && (
                 <p role="alert" className="text-sm text-[var(--color-danger)]">
                   {error}
                 </p>
               )}
-              <button type="submit" disabled={busy || !selectedPackId} className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
-                Réserver et obtenir les instructions
+              <button type="submit" disabled={busy || !selectedPackId || !validAmount} className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--color-primary)] px-5 text-sm font-semibold text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-60">
+                Vérifier ma vente et obtenir les instructions <ArrowRight size={16} className="ml-2 inline" aria-hidden />
               </button>
             </form>
           </Panel>

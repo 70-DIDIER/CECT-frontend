@@ -9,9 +9,10 @@ export interface PackVersion {
   period: { unit: string; every: number; cycles: number | null } | null
   quota_per_period: string | null
   total_quota: string | null
+  first_credit_delay_periods?: number | null
   cumulative: boolean | null
   eligible_person_types: string[]
-  rules: { discount_bps?: number; min_topup_xof?: number; reference_value_xof?: number; cashback?: { enabled: boolean; rate_bps: number; max_yem: string | null } }
+  rules: { first_credit_delay_periods?: number; discount_bps?: number; min_topup_xof?: number; reference_value_xof?: number; cashback?: { enabled: boolean; rate_bps: number; max_yem: string | null } }
 }
 
 export interface PackPlan {
@@ -33,6 +34,8 @@ export interface UserPack {
   price_xof: number
   balance: { available: string; reserved: string; consumed: string } | null
   activated_at: string | null
+  created_at?: string | null
+  paid_at?: string | null
   expires_at: string | null
 }
 
@@ -42,8 +45,8 @@ export interface SubscribeResult {
 }
 
 export const FAMILIES: ReadonlyArray<{ family: PackFamily; title: string; summary: string }> = [
-  { family: 'CONSOMMATEUR', title: 'Consommateur', summary: 'Un quota de YEM crédité chaque mois pour payer chez les marchands du réseau.' },
-  { family: 'PERSONNEL', title: 'Personnel', summary: 'Un solde que vous rechargez à la demande, avec des YEM bonus selon les conditions de votre formule.' },
+  { family: 'CONSOMMATEUR', title: 'Consommateur', summary: 'YEM débloqués à la fréquence fixée par votre formule, pour vos achats chez les marchands partenaires.' },
+  { family: 'PERSONNEL', title: 'Personnel', summary: 'Achetez des YEM quand vous le souhaitez, utilisez-les librement dans les usages permis par CECT : aucun cycle, aucune échéance.' },
   { family: 'VENDEUR', title: 'Vendeur', summary: 'Vendez vos YEM à la CECT et recevez le montant en FCFA sur votre moyen de réception.' },
   { family: 'MARCHAND', title: 'Marchand', summary: 'Pour les personnes morales : encaissez des YEM auprès de vos clients et faites-les racheter par la CECT.' },
 ]
@@ -52,6 +55,7 @@ const UNIT_LABELS: Record<string, [string, string]> = {
   day: ['jour', 'jours'],
   week: ['semaine', 'semaines'],
   month: ['mois', 'mois'],
+  half_month: ['quinzaine', 'quinzaines'],
   year: ['an', 'ans'],
 }
 
@@ -59,20 +63,28 @@ export function termLabel(version: PackVersion): string | null {
   const period = version.period
   if (!period?.cycles) return null
   const [singular, plural] = UNIT_LABELS[period.unit] ?? [period.unit, period.unit]
-  const total = period.cycles * period.every
-  return `${total} ${total > 1 ? plural : singular}`
+  const delay = version.first_credit_delay_periods ?? version.rules.first_credit_delay_periods ?? 0
+  const total = (period.cycles + delay) * period.every
+  if (period.unit === 'half_month') return `${total} quinzaines, soit ${total / 2} mois calendaires depuis l’activation${delay ? ` (dont ${delay * period.every} quinzaine(s) d’attente avant le 1er crédit)` : ''}`
+  return `${total} ${total > 1 ? plural : singular} depuis l’activation${delay ? ` (dont ${delay * period.every} d’attente avant le 1er crédit)` : ''}`
 }
 
 export function periodLabel(version: PackVersion): string {
   const period = version.period
   if (!period) return 'à la demande'
   const [singular, plural] = UNIT_LABELS[period.unit] ?? [period.unit, period.unit]
+  if (period.unit === 'half_month') return period.every === 1 ? 'par quinzaine' : `toutes les ${period.every} quinzaines`
   return period.every > 1 ? `tous les ${period.every} ${plural}` : `par ${singular}`
 }
 
 export function packFacts(version: PackVersion): { label: string; value: string }[] {
   const facts: { label: string; value: string }[] = [{ label: 'Prix', value: version.price_xof === 0 ? 'Gratuit' : formatXof(version.price_xof) }]
   if (version.quota_per_period) facts.push({ label: 'Quota', value: `${formatYem(version.quota_per_period)} ${periodLabel(version)}` })
+  if (version.period) {
+    const delay = version.first_credit_delay_periods ?? version.rules.first_credit_delay_periods ?? 0
+    facts.push({ label: 'Premier crédit YEM', value: delay === 0 ? 'Dès la confirmation du paiement intégral' : `Après ${delay} période${delay > 1 ? 's' : ''} complète${delay > 1 ? 's' : ''} à partir de l’activation` })
+    facts.push({ label: 'Crédits programmés', value: `${version.period.cycles} distributions YEM` })
+  }
   const term = termLabel(version)
   if (term) facts.push({ label: 'Durée', value: term })
   if (version.total_quota) facts.push({ label: 'Quota total', value: formatYem(version.total_quota) })

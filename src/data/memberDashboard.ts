@@ -15,6 +15,7 @@ export interface MemberPack {
   available: string
   reserved: string
   credited: string
+  contractual_total: string | null
   credited_purchase: string
   credited_cashback: string
   consumed: string
@@ -93,6 +94,7 @@ interface ApiDashboard {
     available: string | null
     reserved: string | null
     credited: string
+    contractual_total: string | null
     credited_purchase: string
     credited_cashback: string
     consumed: string | null
@@ -154,6 +156,7 @@ export async function fetchMemberDashboard(): Promise<MemberDashboardData> {
     available: pack.available ?? '0',
     reserved: pack.reserved ?? '0',
     credited: pack.credited ?? '0',
+    contractual_total: pack.contractual_total ?? null,
     credited_purchase: pack.credited_purchase ?? '0',
     credited_cashback: pack.credited_cashback ?? '0',
     consumed: pack.consumed ?? '0',

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { BadgeCheck, Boxes, Coins, LayoutDashboard, LineChart, ScanLine, Store, UserRound } from 'lucide-react'
+import { BadgeCheck, Boxes, CalendarDays, Coins, LayoutDashboard, LineChart, ScanLine, Store, UserRound } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { isAdminRole } from '@/lib/roles'
 import { AppShell, type NavSection } from './AppShell'
@@ -12,6 +12,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: 'Accueil', icon: LayoutDashboard, to: '/espace', end: true, tab: true },
       { label: 'Mes packs', icon: Boxes, to: '/espace/packs', tab: true },
+      { label: 'Mes règlements', icon: CalendarDays, to: '/espace/calendrier' },
       { label: 'Activité', icon: LineChart, to: '/espace/activite', tab: true },
     ],
   },
@@ -34,6 +35,7 @@ const ONBOARDING_SECTIONS: NavSection[] = [{ title: 'Compte', items: [{ label: '
 const TITLES: Record<string, string> = {
   '/espace': 'Accueil',
   '/espace/packs': 'Mes packs',
+  '/espace/calendrier': 'Mes règlements et échéanciers',
   '/espace/activite': 'Activité',
   '/espace/payer': 'Payer un marchand',
   '/espace/vendre': 'Vendre mes YEM',
@@ -49,7 +51,14 @@ export function MemberLayout() {
   const location = useLocation()
   const isLegal = user?.personType === 'legal'
 
-  const sections = useMemo(() => SECTIONS.map((section) => ({ ...section, items: section.items.filter((item) => item.to !== '/espace/marchand' || isLegal) })), [isLegal])
+  const sections = useMemo(() => SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (item.to === '/espace/marchand') return isLegal
+      if (item.to === '/espace/vendre' || item.to === '/espace/payer') return !isLegal
+      return true
+    }),
+  })).filter((section) => section.items.length > 0), [isLegal])
 
   if (loading) return <FullPageLoader />
   if (!user) return <Navigate to="/connexion" replace />
@@ -57,6 +66,8 @@ export function MemberLayout() {
   const onboarding = user.status !== 'active'
   if (user.status === 'pending_kyc' && !['/espace/kyc', '/espace/adhesion'].includes(location.pathname)) return <Navigate to="/espace/kyc" replace />
   if (onboarding && !['/espace/adhesion', '/espace/kyc'].includes(location.pathname)) return <Navigate to={user.status === 'pending_kyc' ? '/espace/kyc' : '/espace/adhesion'} replace />
+  if (isLegal && ['/espace/payer', '/espace/vendre'].includes(location.pathname)) return <Navigate to="/espace/marchand" replace />
+  if (!isLegal && location.pathname === '/espace/marchand') return <Navigate to="/espace" replace />
 
   async function handleLogout() {
     await logout()

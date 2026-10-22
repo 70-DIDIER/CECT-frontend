@@ -6,6 +6,8 @@ import { Panel } from '@/components/dashboard/Panel'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MemberCard } from '@/components/ui/MemberCard'
+import { MemberExperienceHero, MemberNextSteps } from '@/components/dashboard/MemberExperienceHero'
+import { CalendarDays } from 'lucide-react'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { btnLime, btnOnDark, btnOutline } from '@/components/ui/buttons'
 import { useMemberDashboard } from '@/data/useMemberDashboard'
@@ -249,7 +251,7 @@ export default function HomePage() {
         <title>Accueil — CECT Togo</title>
       </Helmet>
 
-      <PageHeader title={firstName ? `Bonjour, ${firstName}` : 'Bonjour'} description="Votre solde, vos opérations en cours et vos derniers mouvements." />
+      <PageHeader title={firstName ? `Bonjour, ${firstName}` : 'Bonjour'} description={data?.profile.kind === 'legal' ? 'Pilotez vos droits et vos activités marchandes en toute clarté.' : 'Un espace clair pour suivre vos droits, vos quotas et vos opérations.'} />
 
       {query.isPending && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]" aria-busy>
@@ -269,12 +271,17 @@ export default function HomePage() {
 
       {data && (
         <div className="space-y-8">
+          <MemberExperienceHero data={data} />
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] px-5 py-4">
+            <div className="flex items-center gap-3"><CalendarDays size={22} className="text-[var(--color-primary)]" aria-hidden /><div><p className="text-sm font-bold text-[var(--color-text)]">Ma fiche de règlements</p><p className="text-xs text-[var(--color-text-muted)]">Suivez vos souscriptions et les dates de crédit de vos YEM.</p></div></div>
+            <Link to="/espace/calendrier" className="inline-flex min-h-10 items-center gap-1.5 text-sm font-bold text-[var(--color-primary)]">Consulter mon calendrier <ArrowRight size={16} aria-hidden /></Link>
+          </div>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
             <MemberCard name={data.profile.name} pernum={data.profile.pernum} memberNumber={data.profile.member_number} memberSince={data.profile.member_since} active={data.membership.status === 'active'} />
             <Balance data={data} />
           </div>
           <Todo data={data} />
-          <MainPack data={data} />
+          {data.packs.length === 0 ? <MemberNextSteps data={data} /> : <MainPack data={data} />}
           <Movements data={data} />
         </div>
       )}
