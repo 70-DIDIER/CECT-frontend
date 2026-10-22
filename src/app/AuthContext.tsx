@@ -70,7 +70,7 @@ function toAuthUser(api: ApiUser): AuthUser {
 
 export function homeFor(user: AuthUser): string {
   if (isAdminRole(user.role)) return '/admin'
-  return user.status === 'active' ? '/espace' : user.status === 'pending_kyc' ? '/espace/kyc' : '/espace/adhesion'
+  return user.status === 'active' ? '/espace' : '/espace/kyc'
 }
 
 interface ChallengeBody {
