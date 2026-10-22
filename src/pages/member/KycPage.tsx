@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 interface CaseState {
   account_status: string
   provider: 'manual' | 'didit'
+  provider_environment?: 'sandbox' | 'live' | null
   kyc: {
     id: string
     status: 'provider_pending' | 'submitted' | 'approved' | 'rejected' | 'needs_information'
@@ -145,6 +146,15 @@ export default function KycPage() {
         {state?.provider === 'didit' && (user?.status === 'pending_kyc' || user?.status === 'pending_payment') && status !== 'approved' && (
           <Panel title="Contrôle biométrique officiel avec Didit">
             <div className="space-y-4 text-sm">
+              {state?.provider_environment === 'sandbox' && (
+                <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+                  <strong className="block mb-1">Mode test — vérification non officielle</strong>
+                  Didit est actuellement connecté en Sandbox. Ne transmettez pas de véritables
+                  documents d'identité ni de données biométriques pour cet essai.
+                  Un résultat simulé ne valide pas une identité et ne permet ni de payer
+                  l'adhésion ni d'accéder aux opérations YEM.
+                </div>
+              )}
               <div className="flex gap-3 items-start">
                 <ScanFace className="shrink-0 text-[var(--color-primary)]" size={24} />
                 <p>Didit vous guidera pour scanner votre pièce officielle, prendre un selfie en direct,
