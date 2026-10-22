@@ -105,7 +105,7 @@ function SubscribeDialog({ plan, onClose }: { plan: PackPlan; onClose: () => voi
               method={step.result.payment.method ?? method}
               amount={step.result.payment.amount}
               onConfirmed={async () => {
-                await post(`/me/payments/${step.result.payment?.id}/demo-settle`)
+                await post(`/me/payments/${step.result.payment?.id}/simulate`)
                 await status.refetch()
               }}
               onChangeMethod={() => setStep({ name: 'method' })}
@@ -221,7 +221,7 @@ function TopupDialog({ pack, minimum, onClose }: { pack: UserPack; minimum: numb
                   method={state.payment.method ?? method}
                   amount={state.payment.amount}
                   onConfirmed={async () => {
-                    await post(`/me/payments/${state.payment.id}/demo-settle`)
+                    await post(`/me/payments/${state.payment.id}/simulate`)
                     await topups.refetch()
                   }}
                   onChangeMethod={() => setState(null)}
