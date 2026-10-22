@@ -103,7 +103,7 @@ function PackSchedule({ id }: { id: string }) {
   const topups = useQuery({
     queryKey: ['payment-calendar', 'topups', id],
     queryFn: () => get<PackTopup[]>(`/me/packs/${id}/topups`),
-    enabled: section === 'topups',
+    enabled: section === 'topups' || detail.data?.family === 'PERSONNEL',
     staleTime: 15_000,
   })
   return (
@@ -114,23 +114,24 @@ function PackSchedule({ id }: { id: string }) {
           <p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">Le pack se paie intégralement à la souscription ; les crédits YEM suivent leur propre échéancier.</p>
         </div>
         <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--dash-card)] p-1" role="group" aria-label="Type d'historique">
-          <button type="button" aria-pressed={section === 'credits'} onClick={() => setSection('credits')} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${section === 'credits' ? 'bg-emerald-600 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Crédits YEM</button>
-          <button type="button" aria-pressed={section === 'topups'} onClick={() => setSection('topups')} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${section === 'topups' ? 'bg-emerald-600 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Rechargements</button>
+          {detail.data?.family !== 'PERSONNEL' && <button type="button" aria-pressed={section === 'credits'} onClick={() => setSection('credits')} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${section === 'credits' ? 'bg-emerald-600 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Crédits YEM</button>}
+          <button type="button" aria-pressed={section === 'topups'} onClick={() => setSection('topups')} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${section === 'topups' || detail.data?.family === 'PERSONNEL' ? 'bg-emerald-600 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Rechargements</button>
         </div>
       </div>
+      {detail.data?.family === 'PERSONNEL' && <p className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[.07] p-4 text-sm leading-6 text-[var(--color-text)]">Personnel Libre : aucun cycle ni calendrier. Les YEM achetés deviennent disponibles après confirmation de chaque règlement ; consultez ici vos rechargements.</p>}
       {detail.data && (
         <dl className="grid gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-4 sm:grid-cols-2 xl:grid-cols-4">
           <div><dt className="text-xs text-[var(--color-text-muted)]">Date d'activation</dt><dd className="mt-1.5 text-sm font-extrabold text-[var(--color-text)]">{displayDate(detail.data.activated_at)}</dd></div>
           <div><dt className="text-xs text-[var(--color-text-muted)]">Prix de souscription</dt><dd className="mt-1.5 text-sm font-extrabold tabular-nums text-[var(--color-text)]">{formatXof(detail.data.price_xof)}</dd></div>
-          <div><dt className="text-xs text-[var(--color-text-muted)]">Date de fin</dt><dd className="mt-1.5 text-sm font-extrabold text-[var(--color-text)]">{displayDate(detail.data.expires_at)}</dd></div>
+          <div><dt className="text-xs text-[var(--color-text-muted)]">Date de fin</dt><dd className="mt-1.5 text-sm font-extrabold text-[var(--color-text)]">{detail.data.family === 'PERSONNEL' ? 'Sans échéance' : displayDate(detail.data.expires_at)}</dd></div>
           <div><dt className="text-xs text-[var(--color-text-muted)]">État du pack</dt><dd className="mt-1.5 text-sm font-extrabold text-[var(--color-text)]">{detail.data.status === 'active' ? 'Actif' : detail.data.status === 'pending_payment' ? 'En attente de paiement' : detail.data.status === 'expired' ? 'Expiré' : 'Clôturé'}</dd></div>
         </dl>
       )}
-      {section === 'credits' && (
+      {section === 'credits' && detail.data?.family !== 'PERSONNEL' && (
         <>
           {detail.isPending && <p className="text-sm text-[var(--color-text-muted)]">Chargement de l'échéancier…</p>}
           {detail.isError && <p role="alert" className="text-sm text-rose-500">Impossible de récupérer les périodes du pack. <button type="button" onClick={() => void detail.refetch()} className="underline">Réessayer</button></p>}
-          {detail.data && detail.data.periods.length === 0 && <p className="text-sm leading-6 text-[var(--color-text-muted)]">Aucun crédit périodique prévu pour cette formule. Les droits et les rechargements dépendent du type de pack.</p>}
+          {detail.data && detail.data.periods.length === 0 && <p className="text-sm leading-6 text-[var(--color-text-muted)]">Aucun crédit périodique prévu. Un pack Personnel fonctionne uniquement à la demande : vous achetez des YEM, ils sont crédités après confirmation et disponibles immédiatement, sans période ni échéancier.</p>}
           {detail.data && detail.data.periods.length > 0 && (
             <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)]">
               <table className="w-full min-w-[620px] text-left text-sm">
@@ -152,7 +153,7 @@ function PackSchedule({ id }: { id: string }) {
           )}
         </>
       )}
-      {section === 'topups' && (
+      {(section === 'topups' || detail.data?.family === 'PERSONNEL') && (
         <>
           {topups.isPending && <p className="text-sm text-[var(--color-text-muted)]">Chargement des rechargements…</p>}
           {topups.isError && <p role="alert" className="text-sm text-rose-500">Historique indisponible. <button type="button" onClick={() => void topups.refetch()} className="underline">Réessayer</button></p>}
