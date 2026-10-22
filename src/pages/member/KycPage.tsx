@@ -158,6 +158,44 @@ export default function KycPage() {
     }
   }
 
+  // Reconcile pending Sandbox sessions even when a completion callback was
+  // missed (page reload, closed SDK, delayed provider response or worker outage).
+  // This is read-only at Didit; the Laravel server independently validates it.
+  useEffect(() => {
+    if (state?.provider !== 'didit' || state.provider_environment !== 'sandbox'
+      || state.sandbox_test_completed || !['provider_pending', 'submitted'].includes(status ?? '')) return
+
+    let disposed = false
+    let inFlight = false
+    async function reconcile() {
+      if (disposed || inFlight || document.visibilityState !== 'visible') return
+      inFlight = true
+      try {
+        await post('/me/kyc/didit/refresh', {})
+        if (!disposed) await queryClient.invalidateQueries({ queryKey: ['member-kyc'] })
+      } catch {
+        // Keep the dossier visible; automatic retries should never claim approval.
+      } finally {
+        inFlight = false
+      }
+    }
+
+    const interval = window.setInterval(() => { void reconcile() }, 60_000)
+    const onFocus = () => { void reconcile() }
+    window.addEventListener('focus', onFocus)
+    const submittedAt = state.kyc?.submitted_at ? Date.parse(state.kyc.submitted_at) : NaN
+    if (!embeddedSessionUrl && (status === 'submitted'
+      || (Number.isFinite(submittedAt) && Date.now() - submittedAt > 60_000))) {
+      void reconcile()
+    }
+    return () => {
+      disposed = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+    }
+  }, [state?.provider, state?.provider_environment, state?.sandbox_test_completed,
+    state?.kyc?.id, state?.kyc?.submitted_at, status, embeddedSessionUrl, queryClient])
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
