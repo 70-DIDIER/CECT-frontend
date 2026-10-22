@@ -12,6 +12,7 @@ interface CaseState {
   account_status: string
   provider: 'manual' | 'didit'
   provider_environment?: 'sandbox' | 'live' | null
+  provider_document_only_test?: boolean
   kyc: {
     id: string
     status: 'provider_pending' | 'submitted' | 'approved' | 'rejected' | 'needs_information'
@@ -49,6 +50,7 @@ export default function KycPage() {
   })
   const state = query.data
   const status = state?.kyc?.status
+  const documentOnlyTest = state?.provider_document_only_test === true
 
   useEffect(() => {
     if (status !== 'approved') return
@@ -185,7 +187,7 @@ export default function KycPage() {
         </Panel>
 
         {state?.provider === 'didit' && (user?.status === 'pending_kyc' || user?.status === 'pending_payment') && status !== 'approved' && (
-          <Panel title={isCompany ? "Vérification d’entreprise CECT (KYB)" : "Contrôle documentaire CECT"}>
+          <Panel title={documentOnlyTest ? "Carte d’identité — test CECT" : isCompany ? "Vérification d’entreprise CECT (KYB)" : "Contrôle d’identité CECT"}>
             <div className="space-y-4 text-sm">
               {state?.provider_environment === 'sandbox' && (
                 <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
@@ -198,13 +200,13 @@ export default function KycPage() {
               )}
               <div className="flex gap-3 items-start">
                 <ScanFace className="shrink-0 text-[var(--color-primary)]" size={24} />
-                <p>{isCompany
+                <p>{isCompany && !documentOnlyTest
                   ? "Didit vous guidera dans la vérification du registre de votre société, de ses documents officiels et de ses bénéficiaires effectifs. Les dirigeants concernés effectueront leur propre contrôle d'identité."
                   : "Pour ce test, seule la carte d'identité est demandée (recto et verso si nécessaire). Prenez des photos nettes ou importez des images de démonstration. Aucun selfie ou contrôle vidéo n'est demandé."}</p>
               </div>
               <div className="flex gap-3 items-start">
                 <Video className="shrink-0 text-[var(--color-primary)]" size={24} />
-                <p>{isCompany
+                <p>{isCompany && !documentOnlyTest
                   ? "Préparez les informations de votre entreprise. Les décisions restent désactivées en mode test."
                   : "La capture s'effectue ici, dans l'espace CECT. Elle n'accorde aucun droit d'adhésion : le dossier restera en attente jusqu'à une véritable vérification."}</p>
               </div>
@@ -219,7 +221,7 @@ export default function KycPage() {
               <button type="button" onClick={() => void startDidit()}
                 disabled={!diditAccepted || diditBusy}
                 className="min-h-11 w-full rounded-xl bg-[var(--color-primary)] px-4 py-3 font-bold text-white disabled:opacity-50">
-                {diditBusy ? 'Ouverture du contrôle…' : status === 'provider_pending' ? 'Reprendre mon contrôle' : isCompany ? 'Démarrer le contrôle entreprise' : 'Photographier ma carte d’identité'}
+                {diditBusy ? 'Ouverture du contrôle…' : status === 'provider_pending' ? 'Reprendre mon contrôle' : documentOnlyTest ? 'Photographier ma carte d’identité' : isCompany ? 'Démarrer le contrôle entreprise' : 'Contrôler mon identité'}
               </button>
               {embeddedSessionUrl && (
                 <section aria-label="Module intégré de vérification" className="rounded-xl border border-[var(--color-border)] overflow-hidden">
