@@ -55,7 +55,7 @@ export function MemberLayout() {
   if (!user) return <Navigate to="/connexion" replace />
   if (isAdminRole(user.role)) return <Navigate to="/admin" replace />
   const onboarding = user.status !== 'active'
-  if (user.status === 'pending_kyc' && location.pathname !== '/espace/kyc') return <Navigate to="/espace/kyc" replace />
+  if (user.status === 'pending_kyc' && !['/espace/kyc', '/espace/adhesion'].includes(location.pathname)) return <Navigate to="/espace/kyc" replace />
   if (onboarding && !['/espace/adhesion', '/espace/kyc'].includes(location.pathname)) return <Navigate to={user.status === 'pending_kyc' ? '/espace/kyc' : '/espace/adhesion'} replace />
 
   async function handleLogout() {
