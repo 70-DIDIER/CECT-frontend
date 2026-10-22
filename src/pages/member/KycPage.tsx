@@ -144,7 +144,7 @@ export default function KycPage() {
         </Panel>
 
         {state?.provider === 'didit' && (user?.status === 'pending_kyc' || user?.status === 'pending_payment') && status !== 'approved' && (
-          <Panel title="Contrôle biométrique officiel avec Didit">
+          <Panel title={isCompany ? "Vérification de votre entreprise (KYB) avec Didit" : "Contrôle biométrique officiel avec Didit"}>
             <div className="space-y-4 text-sm">
               {state?.provider_environment === 'sandbox' && (
                 <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
@@ -157,9 +157,9 @@ export default function KycPage() {
               )}
               <div className="flex gap-3 items-start">
                 <ScanFace className="shrink-0 text-[var(--color-primary)]" size={24} />
-                <p>Didit vous guidera pour scanner votre pièce officielle, prendre un selfie en direct,
-                  réaliser une vérification vidéo de présence (liveness actif) et comparer votre visage
-                  à la photo du document. Votre caméra s'ouvre uniquement pendant la vérification sécurisée.</p>
+                <p>{isCompany
+                  ? "Didit vous guidera dans la vérification du registre de votre société, de ses documents officiels et de ses bénéficiaires effectifs. Les dirigeants concernés effectueront leur propre contrôle d'identité."
+                  : "Didit vous guidera pour scanner votre pièce officielle, prendre un selfie en direct, réaliser une vérification vidéo de présence (liveness actif) et comparer votre visage à la photo du document. Votre caméra s'ouvre uniquement pendant la vérification sécurisée."}</p>
               </div>
               <div className="flex gap-3 items-start">
                 <Video className="shrink-0 text-[var(--color-primary)]" size={24} />
