@@ -91,6 +91,7 @@ export default function KycPage() {
     try {
       const result = await post<{ url: string; status: string }>('/me/kyc/didit/start', {
         privacy_notice_accepted: true,
+        restart_sandbox: state?.provider_environment === 'sandbox' && status === 'provider_pending',
       })
       // The CECT UI stays on its own domain. The provider iframe runs inside this authenticated page.
       setEmbeddedSessionUrl(result.url)
