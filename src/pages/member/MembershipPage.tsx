@@ -22,6 +22,7 @@ interface MembershipState {
   payment_attempts: PaymentAttempt[]
   sandbox_preview?: boolean
   payment_enabled?: boolean
+  demo_checkout?: boolean
 }
 
 const QUERY_KEY = ['membership']
@@ -64,6 +65,7 @@ export default function MembershipPage() {
   const attempt = state?.payment_attempts[0]
   const active = state?.status === 'active' || user?.status === 'active'
   const sandboxPreview = state?.sandbox_preview === true && state?.payment_enabled === false
+  const demoCheckout = state?.demo_checkout === true
 
   useEffect(() => {
     if (!active) return
@@ -203,10 +205,10 @@ export default function MembershipPage() {
                     </p>
                   )}
                 </div>
-                <MethodPicker value={selectedMethod} onChange={setMethod} country={countryCode} />
+                <MethodPicker value={selectedMethod} onChange={setMethod} country={countryCode} demoCheckout={demoCheckout} />
                 <p className="flex items-center gap-2 rounded-xl bg-[var(--color-primary)]/5 p-3 text-xs text-[var(--color-text-muted)]">
                   <ShieldCheck size={16} className="shrink-0 text-[var(--color-primary)]" aria-hidden />
-                  Environnement de démonstration : aucun paiement réel, SMS ni débit mobile.
+                  Paiement sécurisé en simulation : aucune somme ne sera débitée.
                 </p>
                 {error && (
                   <p role="alert" className="text-sm text-[var(--color-danger)]">
