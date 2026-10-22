@@ -2,10 +2,9 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Helmet } from 'react-helmet-async'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { BadgeCheck, CheckCircle2, Clock3, X } from 'lucide-react'
+import { BadgeCheck, CheckCircle2, Clock3, Boxes, ArrowRight, RefreshCw, X } from 'lucide-react'
 import { SegmentedControl } from '@/components/dashboard/SegmentedControl'
 import { StatusBadge } from '@/components/dashboard/StatusBadge'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { btnPrimary } from '@/components/ui/buttons'
 import { useMemberDashboard } from '@/data/useMemberDashboard'
@@ -417,17 +416,20 @@ export default function PacksCatalogPage() {
         <div className="space-y-6">
           {mine.isPending && <div className="h-48 animate-pulse rounded-[18px] bg-[var(--chart-track)]" />}
           {mine.data && myPacks.length === 0 && (
-            <div className="rounded-[18px] border border-[var(--color-border)] bg-[var(--dash-card)]">
-              <EmptyState
-                title="Vous n’avez pas encore de pack"
-                description="Choisissez une formule dans le catalogue pour recevoir un quota de YEM."
-                action={
-                  <button type="button" onClick={() => setTab('catalog')} className={btnPrimary}>
-                    Voir le catalogue
-                  </button>
-                }
-              />
-            </div>
+            <section aria-labelledby="no-pack-title" className="relative overflow-hidden rounded-[26px] border border-[var(--color-border)] bg-[var(--dash-card)] px-6 py-9 shadow-[var(--shadow-card)] sm:px-10">
+              <div aria-hidden className="pointer-events-none absolute -right-10 -top-20 h-60 w-60 rounded-full bg-emerald-500/[.07] blur-3xl" />
+              <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-4">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-[var(--color-primary)]"><Boxes size={28} aria-hidden /></span>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--color-primary)]">Votre prochaine étape</p>
+                    <h2 id="no-pack-title" className="mt-2 text-xl font-extrabold tracking-tight text-[var(--color-text)]">Aucun pack actif pour le moment</h2>
+                    <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--color-text-muted)]">{dashboard.data?.profile.kind === 'legal' ? 'Choisissez une formule accessible à votre personne morale pour activer les opérations adaptées à votre activité.' : 'Choisissez une formule selon votre objectif : vendre des YEM ou payer chez les marchands.'}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setTab('catalog')} className={btnPrimary}>Explorer le catalogue <ArrowRight size={16} aria-hidden /></button>
+              </div>
+            </section>
           )}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {myPacks.map((pack) => (
@@ -454,6 +456,14 @@ export default function PacksCatalogPage() {
                 Réessayer
               </button>
             </p>
+          )}
+          {catalog.data && catalog.data.length === 0 && (
+            <section aria-labelledby="empty-catalog-title" className="rounded-[26px] border border-dashed border-[var(--color-border)] bg-[var(--dash-card)] px-6 py-10 text-center sm:px-10">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/10 text-[var(--color-primary)]"><Boxes size={30} aria-hidden /></div>
+              <h2 id="empty-catalog-title" className="mt-5 text-xl font-extrabold text-[var(--color-text)]">Le catalogue n’est pas encore publié</h2>
+              <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[var(--color-text-muted)]">Aucune formule n’est actuellement proposée par la CECT. Le catalogue et les prix sont configurés par l’administration. Aucun montant ni droit n’est attribué avant publication.</p>
+              <button type="button" onClick={() => void catalog.refetch()} className={btnPrimary + ' mt-6'}><RefreshCw size={16} aria-hidden /> Actualiser les formules</button>
+            </section>
           )}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {FAMILIES.flatMap(({ family }) => (catalog.data ?? []).filter((plan) => plan.family === family)).map((plan) => (
