@@ -271,6 +271,7 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
   if (!version) return null
   const hasActive = owned?.status === 'active'
   const pending = owned?.status === 'pending_payment'
+  const isDemo = plan.code.startsWith('TST-')
   const locked = plan.eligible === false
   const sellerLimitReached = plan.family === 'VENDEUR' && sellerSlotsUsed >= 2
   const cannotResubscribe = hasActive && plan.family === 'MARCHAND'
@@ -278,7 +279,8 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
   const price = version.price_xof === 0 ? (plan.family === 'PERSONNEL' ? 'Ouverture gratuite' : 'Gratuit') : formatXof(version.price_xof)
 
   return (
-    <article className="flex flex-col rounded-[18px] border border-[var(--color-border)] bg-[var(--dash-card)] p-6">
+    <article className={`flex flex-col rounded-[22px] border p-4 sm:p-6 ${isDemo ? 'border-amber-500/45 bg-gradient-to-br from-amber-500/[.075] to-[var(--dash-card)]' : 'border-[var(--color-border)] bg-[var(--dash-card)]'}`}>
+      {isDemo && <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-wide text-amber-500"> <span aria-hidden>◈</span> Démonstration · Paiement fictif</div>}
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-primary)]">{FAMILIES.find((family) => family.family === plan.family)?.title}</p>
@@ -288,6 +290,7 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
         {pending && <StatusBadge label="Paiement en attente" tone="warning" icon={Clock3} />}
       </div>
       <p className="mt-3 text-[28px] font-bold leading-8 tracking-tight text-[var(--color-text)] [font-variant-numeric:tabular-nums]">{price}</p>
+      {isDemo && <p className="mt-1 text-xs font-bold text-amber-500">Montant de test uniquement · aucun débit réel</p>}
       {plan.description && <p className="mt-2 text-sm leading-6 text-[var(--color-text-muted)]">{plan.description}</p>}
       <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-bold text-[var(--color-text-muted)]">
         <span className="rounded-full bg-emerald-500/10 px-3 py-1.5 text-[var(--color-primary)]">{plan.family === 'PERSONNEL' ? 'Sans calendrier' : `${version.period?.cycles ?? 0} crédits · ${version.period?.unit === 'half_month' ? 'Par quinzaine' : version.period?.unit === 'week' ? 'Par semaine' : version.period?.unit === 'month' ? 'Par mois' : 'Selon le contrat'}`}</span>
@@ -302,7 +305,7 @@ function PlanCard({ plan, owned, sellerSlotsUsed, onSelect, onTopup }: { plan: P
           <p className="text-sm text-[var(--color-text-muted)]">Ce pack n’est pas ouvert à votre type de compte.</p>
         ) : (
           <button type="button" disabled={sellerLimitReached || cannotResubscribe} onClick={hasActive && plan.family === 'PERSONNEL' ? onTopup : onSelect} className={`${btnPrimary} w-full`}>
-            {sellerLimitReached ? 'Limite : 2 packs Vendeur' : hasActive ? (plan.family === 'PERSONNEL' ? 'Recharger' : plan.family === 'MARCHAND' ? 'Pack Marchand actif' : 'Souscrire à nouveau') : pending ? 'Reprendre le paiement' : version.price_xof === 0 ? (plan.family === 'PERSONNEL' ? 'Ouvrir mon portefeuille YEM' : 'Activer gratuitement') : plan.payment_quote ? `Souscrire · ${formatXof(plan.payment_quote.total_amount)}` : 'Souscrire'}
+            {sellerLimitReached ? 'Limite : 2 packs Vendeur' : hasActive ? (plan.family === 'PERSONNEL' ? 'Recharger' : plan.family === 'MARCHAND' ? 'Pack Marchand actif' : isDemo ? 'Reprendre un test de vente' : 'Souscrire à nouveau') : pending ? 'Reprendre le paiement' : isDemo ? 'Tester la souscription' : version.price_xof === 0 ? (plan.family === 'PERSONNEL' ? 'Ouvrir mon portefeuille YEM' : 'Activer gratuitement') : plan.payment_quote ? `Souscrire · ${formatXof(plan.payment_quote.total_amount)}` : 'Souscrire'}
           </button>
         )}
       </div>
@@ -328,6 +331,7 @@ function NextCreditCountdown({ date }: { date: string }) {
 function MyPackCard({ pack, detail, plan, onResume, onTopup }: { pack: UserPack; detail: MemberPack | undefined; plan: PackPlan | undefined; onResume: () => void; onTopup: () => void }) {
   const active = pack.status === 'active'
   const personal = pack.family === 'PERSONNEL'
+  const isDemo = pack.plan.code.startsWith('TST-')
   const familyName = FAMILIES.find(family => family.family === pack.family)?.title ?? pack.family
   const contractual = personal ? (detail?.credited ?? '0') : (detail?.contractual_total ?? detail?.credited ?? '0')
   const unlocked = detail?.credited ?? '0'
@@ -344,6 +348,7 @@ function MyPackCard({ pack, detail, plan, onResume, onTopup }: { pack: UserPack;
     <article className="group relative min-w-0 overflow-hidden rounded-[26px] border border-[var(--color-border)] bg-[var(--dash-card)] shadow-[var(--shadow-card)] transition-all hover:border-emerald-500/45 hover:shadow-[0_18px_60px_rgba(0,0,0,.12)]">
       <div aria-hidden className="absolute right-0 top-0 h-32 w-44 rounded-full bg-emerald-500/[.055] blur-3xl" />
       <div className="relative p-4 sm:p-6">
+        {isDemo && <span className="mb-4 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-extrabold uppercase text-amber-500">Démonstration · Droits fictifs</span>}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[11px] font-extrabold uppercase tracking-[.16em] text-[var(--color-primary)]">{familyName} · {personal ? 'Sans échéance' : 'Crédits périodiques'}</p>
