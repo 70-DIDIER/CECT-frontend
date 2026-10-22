@@ -9,7 +9,7 @@ import { get } from '@/lib/api'
 import { formatXof, formatYem } from '@/lib/format'
 import type { UserPack } from '@/features/packs/types'
 
-type PaymentState = 'paid' | 'pending' | 'canceled'
+type PaymentState = 'paid' | 'pending' | 'canceled' | 'free'
 type PaymentFilter = 'all' | PaymentState
 type ViewMode = 'payments' | 'credits'
 
@@ -64,10 +64,10 @@ function displayDate(value: string | null) {
 }
 
 function StateTag({ state }: { state: PaymentState }) {
-  const label = state === 'paid' ? 'Réglé' : state === 'canceled' ? 'Annulé' : 'En attente'
+  const label = state === 'paid' ? 'Réglé' : state === 'canceled' ? 'Annulé' : state === 'free' ? 'Gratuit' : 'En attente'
   const palette = state === 'paid'
     ? 'bg-emerald-400/10 text-emerald-500'
-    : state === 'canceled' ? 'bg-rose-400/10 text-rose-500' : 'bg-amber-400/10 text-amber-500'
+    : state === 'free' ? 'bg-sky-400/10 text-sky-500' : state === 'canceled' ? 'bg-rose-400/10 text-rose-500' : 'bg-amber-400/10 text-amber-500'
   return <span className={'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ' + palette}>{state === 'paid' ? <CheckCircle2 size={13} aria-hidden /> : <Clock3 size={13} aria-hidden />}{label}</span>
 }
 
@@ -89,7 +89,7 @@ function PackSchedule({ id }: { id: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-bold text-[var(--color-text)]">Fiche de la formule</h3>
-          <p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">La souscription est un règlement distinct des crédits périodiques de YEM.</p>
+          <p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">Le pack se paie intégralement à la souscription ; les crédits YEM suivent leur propre échéancier.</p>
         </div>
         <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--dash-card)] p-1" role="group" aria-label="Type d'historique">
           <button type="button" aria-pressed={section === 'credits'} onClick={() => setSection('credits')} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${section === 'credits' ? 'bg-emerald-600 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Crédits YEM</button>
@@ -121,7 +121,7 @@ function PackSchedule({ id }: { id: string }) {
                       <td className="px-5 py-4 font-bold text-[var(--color-text)]">{String(period.number).padStart(2, '0')}</td>
                       <td className="px-5 py-4 text-[var(--color-text-muted)]">{displayDate(period.starts_at)}</td>
                       <td className="px-5 py-4 font-bold tabular-nums text-[var(--color-text)]">{formatYem(period.quota)}</td>
-                      <td className="px-5 py-4">{period.credited ? <StateTag state="paid" /> : <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-500">À créditer</span>}</td>
+                      <td className="px-5 py-4">{period.credited ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-500"><CheckCircle2 size={13} aria-hidden />Crédité</span> : <span className="rounded-full bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-500">À créditer</span>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -156,12 +156,12 @@ export default function PaymentCalendarPage() {
   const rows: PaymentRow[] = []
   if (membership.data?.membership) {
     const item = membership.data.membership
-    rows.push({ id: item.id, label: 'Adhésion CECT', category: 'Cotisation initiale', amount: item.fee_amount, date: item.paid_at, state: item.paid_at ? 'paid' : 'pending' })
+    rows.push({ id: item.id, label: 'Adhésion CECT', category: 'Cotisation initiale · paiement unique', amount: item.fee_amount, date: item.paid_at, state: item.paid_at ? 'paid' : item.fee_amount === 0 && item.activated_at ? 'free' : 'pending' })
   }
   for (const item of packs.data ?? []) {
     rows.push({
-      id: item.id, packId: item.id, label: item.plan.name, category: 'Souscription · ' + item.family,
-      amount: item.price_xof, date: item.paid_at ?? item.activated_at, state: item.status === 'active' ? 'paid' : item.status === 'canceled' ? 'canceled' : 'pending',
+      id: item.id, packId: item.id, label: item.plan.name, category: 'Paiement intégral · ' + item.family,
+      amount: item.price_xof, date: item.paid_at ?? item.created_at ?? null, state: item.paid_at ? 'paid' : item.price_xof === 0 && item.status === 'active' ? 'free' : item.status === 'canceled' ? 'canceled' : 'pending',
     })
   }
   const visible = rows.filter((row) => filter === 'all' || filter === row.state)
@@ -185,13 +185,13 @@ export default function PaymentCalendarPage() {
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-[#caff2e]"><ReceiptText size={14} aria-hidden /> Fiche financière personnelle</span>
             <h2 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">{legal ? 'Suivi des règlements de votre entreprise' : 'Votre historique de règlements'}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Le montant de chaque souscription est celui du contrat. Les crédits YEM périodiques ne sont pas des mensualités à payer.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65">Paiement à 100 % lors de la souscription. Les crédits YEM arrivent selon leur calendrier contractuel : ce ne sont pas des mensualités à régler.</p>
           </div>
           <CalendarClock size={42} className="text-[#caff2e]" aria-hidden />
         </div>
         <dl className="relative mt-7 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Règlements enregistrés</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{paid.length}</dd></div>
-          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Montant nominal réglé</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{formatXof(totalPaid)}</dd></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Paiements uniques confirmés</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{paid.length}</dd></div>
+          <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Montant initial réglé (hors recharges et frais)</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{formatXof(totalPaid)}</dd></div>
           <div className="rounded-2xl border border-white/10 bg-white/[.07] p-4"><dt className="text-xs text-white/65">Règlements en attente</dt><dd className="mt-2 text-2xl font-extrabold tabular-nums">{pending.length}</dd></div>
         </dl>
       </div>
@@ -201,7 +201,7 @@ export default function PaymentCalendarPage() {
           <button type="button" aria-pressed={view === 'credits'} onClick={() => setView('credits')} className={`rounded-lg px-4 py-2 text-sm font-bold transition ${view === 'credits' ? 'bg-emerald-600 text-white' : 'text-[var(--color-text-muted)]'}`}><Wallet2 size={15} className="mr-1.5 inline" aria-hidden /> Échéancier YEM</button>
         </div>
         {view === 'payments' && <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par statut">
-          {([['all', 'Tous'], ['paid', 'Réglés'], ['pending', 'En attente'], ['canceled', 'Annulés']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className={`min-h-9 rounded-full border px-3 text-xs font-semibold transition ${filter === value ? 'border-[var(--color-primary)] bg-emerald-500/10 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{label}</button>)}
+          {([['all', 'Tous'], ['paid', 'Réglés'], ['pending', 'En attente'], ['canceled', 'Annulés'], ['free', 'Gratuits']] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)} className={`min-h-9 rounded-full border px-3 text-xs font-semibold transition ${filter === value ? 'border-[var(--color-primary)] bg-emerald-500/10 text-[var(--color-primary)]' : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>{label}</button>)}
         </div>}
       </div>
       {unavailable && <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-500/30 p-5 text-sm text-[var(--color-text)]">Le suivi ne peut pas être chargé pour le moment.<button type="button" onClick={() => { void membership.refetch(); void packs.refetch() }} className="inline-flex items-center gap-2 font-bold text-rose-500"><RefreshCw size={15} aria-hidden /> Réessayer</button></div>}
@@ -210,7 +210,7 @@ export default function PaymentCalendarPage() {
         <section className="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-[var(--dash-card)] shadow-[var(--shadow-card)]">
           {view === 'payments' ? (
             <>
-              <div className="border-b border-[var(--color-border)] px-6 py-5"><h2 className="text-base font-extrabold text-[var(--color-text)]">Historique de paiement</h2><p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">Sommes nominales de souscription et adhésion ; les frais de paiement peuvent apparaître séparément sur les reçus de transaction.</p></div>
+              <div className="border-b border-[var(--color-border)] px-6 py-5"><h2 className="text-base font-extrabold text-[var(--color-text)]">Historique de paiement</h2><p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">Un seul règlement pour chaque pack payant, sans mensualités. Prix contractuels hors frais de prestataire et hors rechargements.</p></div>
               {visible.length === 0 ? <div className="px-6 py-14 text-center text-sm text-[var(--color-text-muted)]">Aucun règlement ne correspond à ce filtre.</div> : (
                 <div className="overflow-x-auto"><table className="w-full min-w-[650px] text-left text-sm">
                   <thead className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-muted)]"><tr><th scope="col" className="px-6 py-4">Opération</th><th scope="col" className="px-6 py-4">Date</th><th scope="col" className="px-6 py-4">Montant</th><th scope="col" className="px-6 py-4">Statut</th><th scope="col" className="px-6 py-4">Détails</th></tr></thead>
@@ -218,7 +218,7 @@ export default function PaymentCalendarPage() {
                     {visible.map((row) => <tr key={row.id} className="transition hover:bg-emerald-500/[.035]">
                       <td className="px-6 py-4"><strong className="block text-[var(--color-text)]">{row.label}</strong><span className="mt-1 block text-xs text-[var(--color-text-muted)]">{row.category}</span></td>
                       <td className="px-6 py-4 text-[var(--color-text-muted)]">{displayDate(row.date)}</td>
-                      <td className="px-6 py-4 font-bold tabular-nums">{formatXof(row.amount)}</td>
+                      <td className="px-6 py-4 font-bold tabular-nums">{row.state === 'free' ? 'Gratuit' : formatXof(row.amount)}</td>
                       <td className="px-6 py-4"><StateTag state={row.state} /></td>
                       <td className="px-6 py-4">{row.packId ? <button type="button" aria-expanded={expandedId === row.packId} onClick={() => setExpandedId(expandedId === row.packId ? null : row.packId ?? null)} className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-bold text-[var(--color-primary)]">{expandedId === row.packId ? 'Masquer' : 'Afficher le calendrier'}{expandedId === row.packId ? <ChevronUp size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}</button> : <span className="text-xs text-[var(--color-text-muted)]">Adhésion</span>}</td>
                     </tr>)}
