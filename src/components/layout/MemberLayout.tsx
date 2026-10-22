@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { BadgeCheck, Boxes, Coins, LayoutDashboard, LineChart, ScanLine, Store, UserRound } from 'lucide-react'
+import { BadgeCheck, Boxes, CalendarDays, Coins, LayoutDashboard, LineChart, ScanLine, Store, UserRound } from 'lucide-react'
 import { useAuth } from '@/app/AuthContext'
 import { isAdminRole } from '@/lib/roles'
 import { AppShell, type NavSection } from './AppShell'
@@ -12,6 +12,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: 'Accueil', icon: LayoutDashboard, to: '/espace', end: true, tab: true },
       { label: 'Mes packs', icon: Boxes, to: '/espace/packs', tab: true },
+      { label: 'Mes règlements', icon: CalendarDays, to: '/espace/calendrier' },
       { label: 'Activité', icon: LineChart, to: '/espace/activite', tab: true },
     ],
   },
@@ -34,6 +35,7 @@ const ONBOARDING_SECTIONS: NavSection[] = [{ title: 'Compte', items: [{ label: '
 const TITLES: Record<string, string> = {
   '/espace': 'Accueil',
   '/espace/packs': 'Mes packs',
+  '/espace/calendrier': 'Mes règlements et échéanciers',
   '/espace/activite': 'Activité',
   '/espace/payer': 'Payer un marchand',
   '/espace/vendre': 'Vendre mes YEM',
