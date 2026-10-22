@@ -51,7 +51,14 @@ export function MemberLayout() {
   const location = useLocation()
   const isLegal = user?.personType === 'legal'
 
-  const sections = useMemo(() => SECTIONS.map((section) => ({ ...section, items: section.items.filter((item) => item.to !== '/espace/marchand' || isLegal) })), [isLegal])
+  const sections = useMemo(() => SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (item.to === '/espace/marchand') return isLegal
+      if (item.to === '/espace/vendre' || item.to === '/espace/payer') return !isLegal
+      return true
+    }),
+  })).filter((section) => section.items.length > 0), [isLegal])
 
   if (loading) return <FullPageLoader />
   if (!user) return <Navigate to="/connexion" replace />
@@ -59,6 +66,8 @@ export function MemberLayout() {
   const onboarding = user.status !== 'active'
   if (user.status === 'pending_kyc' && !['/espace/kyc', '/espace/adhesion'].includes(location.pathname)) return <Navigate to="/espace/kyc" replace />
   if (onboarding && !['/espace/adhesion', '/espace/kyc'].includes(location.pathname)) return <Navigate to={user.status === 'pending_kyc' ? '/espace/kyc' : '/espace/adhesion'} replace />
+  if (isLegal && ['/espace/payer', '/espace/vendre'].includes(location.pathname)) return <Navigate to="/espace/marchand" replace />
+  if (!isLegal && location.pathname === '/espace/marchand') return <Navigate to="/espace" replace />
 
   async function handleLogout() {
     await logout()
