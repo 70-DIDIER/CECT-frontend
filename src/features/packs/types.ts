@@ -55,6 +55,7 @@ const UNIT_LABELS: Record<string, [string, string]> = {
   day: ['jour', 'jours'],
   week: ['semaine', 'semaines'],
   month: ['mois', 'mois'],
+  half_month: ['quinzaine', 'quinzaines'],
   year: ['an', 'ans'],
 }
 
@@ -64,6 +65,7 @@ export function termLabel(version: PackVersion): string | null {
   const [singular, plural] = UNIT_LABELS[period.unit] ?? [period.unit, period.unit]
   const delay = version.first_credit_delay_periods ?? version.rules.first_credit_delay_periods ?? 0
   const total = (period.cycles + delay) * period.every
+  if (period.unit === 'half_month') return `${total} quinzaines, soit ${total / 2} mois calendaires depuis l’activation${delay ? ` (dont ${delay * period.every} quinzaine(s) d’attente avant le 1er crédit)` : ''}`
   return `${total} ${total > 1 ? plural : singular} depuis l’activation${delay ? ` (dont ${delay * period.every} d’attente avant le 1er crédit)` : ''}`
 }
 
@@ -71,6 +73,7 @@ export function periodLabel(version: PackVersion): string {
   const period = version.period
   if (!period) return 'à la demande'
   const [singular, plural] = UNIT_LABELS[period.unit] ?? [period.unit, period.unit]
+  if (period.unit === 'half_month') return period.every === 1 ? 'par quinzaine' : `toutes les ${period.every} quinzaines`
   return period.every > 1 ? `tous les ${period.every} ${plural}` : `par ${singular}`
 }
 
