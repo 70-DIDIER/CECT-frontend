@@ -54,6 +54,14 @@ export default function KycPage() {
   const status = state?.kyc?.status
   const documentOnlyTest = state?.provider_document_only_test === true
 
+  // The Sandbox document journey continues to the read-only membership
+  // checkout preview, never to a real payment or activated YEM account.
+  useEffect(() => {
+    if (state?.provider_environment === 'sandbox' && state?.sandbox_test_completed) {
+      navigate('/espace/adhesion', { replace: true })
+    }
+  }, [state?.provider_environment, state?.sandbox_test_completed, navigate])
+
   useEffect(() => {
     if (status !== 'approved') return
     void refresh().then((next) => {
