@@ -153,7 +153,7 @@ export default function PaymentCalendarPage() {
   for (const item of packs.data ?? []) {
     rows.push({
       id: item.id, packId: item.id, label: item.plan.name, category: 'Souscription · ' + item.family,
-      amount: item.price_xof, date: item.activated_at, state: item.status === 'active' ? 'paid' : item.status === 'canceled' ? 'canceled' : 'pending',
+      amount: item.price_xof, date: item.paid_at ?? item.activated_at, state: item.status === 'active' ? 'paid' : item.status === 'canceled' ? 'canceled' : 'pending',
     })
   }
   const visible = rows.filter((row) => filter === 'all' || filter === row.state)
