@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import type { CountryCode } from 'libphonenumber-js/min'
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js/min'
 import { CountrySelect } from '@/components/ui/CountrySelect'
+import { useAuth } from '@/app/AuthContext'
 import { DEFAULT_COUNTRY, toInternationalPhone } from '@/lib/countries'
 import { CheckCircle2, Loader2, Smartphone } from 'lucide-react'
 import { formatXof } from '@/lib/format'
@@ -25,8 +26,10 @@ interface SimulatedMobilePaymentProps {
 }
 
 export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMethod }: SimulatedMobilePaymentProps) {
-  const [country, setCountry] = useState<CountryCode>(DEFAULT_COUNTRY)
-  const [phone, setPhone] = useState('')
+  const { user } = useAuth()
+  const registeredPhone = parsePhoneNumberFromString(user?.phone ?? '')
+  const [country, setCountry] = useState<CountryCode>(registeredPhone?.country ?? DEFAULT_COUNTRY)
+  const [phone, setPhone] = useState(registeredPhone?.nationalNumber ?? '')
   const [step, setStep] = useState<Step>('phone')
   const [error, setError] = useState<string | null>(null)
 
@@ -83,7 +86,7 @@ export function SimulatedMobilePayment({ method, amount, onConfirmed, onChangeMe
           Numéro de téléphone
         </label>
         <div className="flex items-center gap-2">
-          <CountrySelect value={country} onChange={(iso) => { setCountry(iso as CountryCode); setPhone('') }} className="shrink-0" />
+          <CountrySelect value={country} onChange={(iso) => { setCountry(iso as CountryCode); setPhone('') }} className="w-32 shrink-0" />
           <input
             id="simulated-phone"
             value={phone}
