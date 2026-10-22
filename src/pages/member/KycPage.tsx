@@ -49,7 +49,7 @@ export default function KycPage() {
   const status = state?.kyc?.status
 
   useEffect(() => {
-    if (user?.status !== 'pending_payment' && status !== 'approved') return
+    if (status !== 'approved') return
     void refresh().then((next) => {
       if (next?.status === 'pending_payment') navigate('/espace/adhesion', { replace: true })
     })
@@ -142,7 +142,7 @@ export default function KycPage() {
           </div>
         </Panel>
 
-        {state?.provider === 'didit' && user?.status === 'pending_kyc' && (
+        {state?.provider === 'didit' && (user?.status === 'pending_kyc' || user?.status === 'pending_payment') && status !== 'approved' && (
           <Panel title="Contrôle biométrique officiel avec Didit">
             <div className="space-y-4 text-sm">
               <div className="flex gap-3 items-start">
