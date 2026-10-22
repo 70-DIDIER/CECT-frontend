@@ -96,6 +96,14 @@ function PackSchedule({ id }: { id: string }) {
           <button type="button" aria-pressed={section === 'topups'} onClick={() => setSection('topups')} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${section === 'topups' ? 'bg-emerald-600 text-white' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}>Rechargements</button>
         </div>
       </div>
+      {detail.data && (
+        <dl className="grid gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--dash-card)] p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div><dt className="text-xs text-[var(--color-text-muted)]">Date d'activation</dt><dd className="mt-1.5 text-sm font-extrabold text-[var(--color-text)]">{displayDate(detail.data.activated_at)}</dd></div>
+          <div><dt className="text-xs text-[var(--color-text-muted)]">Prix de souscription</dt><dd className="mt-1.5 text-sm font-extrabold tabular-nums text-[var(--color-text)]">{formatXof(detail.data.price_xof)}</dd></div>
+          <div><dt className="text-xs text-[var(--color-text-muted)]">Date de fin</dt><dd className="mt-1.5 text-sm font-extrabold text-[var(--color-text)]">{displayDate(detail.data.expires_at)}</dd></div>
+          <div><dt className="text-xs text-[var(--color-text-muted)]">État du pack</dt><dd className="mt-1.5 text-sm font-extrabold text-[var(--color-text)]">{detail.data.status === 'active' ? 'Actif' : detail.data.status === 'pending_payment' ? 'En attente de paiement' : detail.data.status === 'expired' ? 'Expiré' : 'Clôturé'}</dd></div>
+        </dl>
+      )}
       {section === 'credits' && (
         <>
           {detail.isPending && <p className="text-sm text-[var(--color-text-muted)]">Chargement de l'échéancier…</p>}
